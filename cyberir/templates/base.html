@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CyberIR{% endblock %} — CyberIR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo-area">
+            🛡️ <span class="logo-text">CyberIR</span>
+            <div class="subtitle">Incident Management</div>
+        </div>
+        
+        <nav class="nav-links">
+            <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">
+                <span class="icon">🏠</span> Dashboard
+            </a>
+            <a href="/incidents" class="{{ 'active' if active_page == 'incidents' else '' }}">
+                <span class="icon">📋</span> Incidents
+            </a>
+            <a href="/correlation" class="{{ 'active' if active_page == 'correlation' else '' }}">
+                <span class="icon">🔗</span> Correlation
+            </a>
+            <a href="/similarity" class="{{ 'active' if active_page == 'similarity' else '' }}">
+                <span class="icon">🔍</span> Similarity
+            </a>
+            <a href="/alerts" class="{{ 'active' if active_page == 'alerts' else '' }}">
+                <span class="icon">🔔</span> Alerts
+                {% if unread_alerts_count > 0 %}
+                <span class="alert-badge" id="sidebarAlertBadge">{{ unread_alerts_count }}</span>
+                {% else %}
+                <span class="alert-badge" id="sidebarAlertBadge" style="display:none">0</span>
+                {% endif %}
+            </a>
+            
+            {% if current_user.has_admin_privileges or current_user.role == 'Admin' %}
+            <a href="/reports" class="{{ 'active' if active_page == 'reports' else '' }}">
+                <span class="icon">📊</span> Reports
+            </a>
+            {% endif %}
+            
+            {% if current_user.role == 'Admin' %}
+            <a href="/settings" class="{{ 'active' if active_page == 'settings' else '' }}">
+                <span class="icon">⚙️</span> Settings
+            </a>
+            <a href="/users" class="{{ 'active' if active_page == 'users' else '' }}">
+                <span class="icon">👥</span> Users
+            </a>
+            {% endif %}
+        </nav>
+        
+        <div class="sidebar-user">
+            <a href="/profile" class="sidebar-user-link" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
+                {% set initials = current_user.full_name[0].upper() ~ (current_user.full_name.split()[-1][0].upper() if current_user.full_name.split()|length > 1 else '') %}
+                <div class="avatar-circle" id="sidebarAvatar" style="background: {{ current_user.avatar_color if current_user.avatar_color else '#2563eb' }}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">
+                    {{ initials }}
+                </div>
+                <div class="sidebar-user-info" style="display:flex; flex-direction:column; min-width:0;">
+                    <div class="sidebar-user-name" id="sidebarUserName" style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ current_user.full_name }}
+                    </div>
+                    <span class="role-badge role-{{ current_user.role|lower }}" style="margin-top:2px;">
+                        {{ current_user.role }}
+                    </span>
+                </div>
+            </a>
+            <a href="/auth/logout" class="sidebar-logout" style="font-size:0.8rem; color:var(--text-secondary); text-decoration:none; margin-top:12px; display:inline-block;">
+                Logout
+            </a>
+        </div>
+    </div>
+    
+    <div class="main-wrapper">
+        <header class="top-header">
+            <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+            <div class="header-right flex gap-3 align-center">
+                <div class="datetime" id="liveClock"></div>
+                <a href="/alerts" class="notification-icon">🔔</a>
+            </div>
+        </header>
+        
+        <main class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" id="flashMessages">
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

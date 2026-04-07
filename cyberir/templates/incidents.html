@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}Incidents{% endblock %}
+{% block page_title %}All Incidents{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/incidents.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="stats-bar">
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #2563eb;">📊</div>
+        <div>
+            <div class="stat-count">{{ stats.total }}</div>
+            <div class="stat-label">Total Incidents</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #dc2626;">🚨</div>
+        <div>
+            <div class="stat-count">{{ stats.open }}</div>
+            <div class="stat-label">Open</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #ea580c;">🔍</div>
+        <div>
+            <div class="stat-count">{{ stats.investigating }}</div>
+            <div class="stat-label">Investigating</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #16a34a;">✅</div>
+        <div>
+            <div class="stat-count">{{ stats.resolved }}</div>
+            <div class="stat-label">Resolved / Closed</div>
+        </div>
+    </div>
+</div>
+
+<div class="action-bar">
+    <div>
+        {% if current_user.role in ['Admin', 'Analyst'] %}
+        <a href="/incidents/log" class="btn-primary" style="text-decoration:none; padding:8px 16px;">Log New Incident</a>
+        {% endif %}
+    </div>
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search title, ID, asset..." value="{{ request.args.get('search', '') }}">
+    </div>
+</div>
+
+<form id="filterForm" action="/incidents" method="GET" class="filter-bar">
+    <input type="hidden" name="search" id="hiddenSearch" value="{{ request.args.get('search', '') }}">
+    <input type="hidden" name="sort" id="hiddenSort" value="{{ sort }}">
+    <input type="hidden" name="order" id="hiddenOrder" value="{{ order }}">
+    <input type="hidden" name="page" id="hiddenPage" value="1">
+    <input type="hidden" name="per_page" id="hiddenPerPage" value="{{ per_page }}">
+
+    <select name="status" class="filter-select">
+        <option value="All Statuses" {% if request.args.get('status') == 'All Statuses' or not request.args.get('status') %}selected{% endif %}>All Statuses</option>
+        <option value="Open" {% if request.args.get('status') == 'Open' %}selected{% endif %}>Open</option>
+        <option value="Investigating" {% if request.args.get('status') == 'Investigating' %}selected{% endif %}>Investigating</option>
+        <option value="Resolved" {% if request.args.get('status') == 'Resolved' %}selected{% endif %}>Resolved</option>
+        <option value="Closed" {% if request.args.get('status') == 'Closed' %}selected{% endif %}>Closed</option>
+    </select>
+
+    <select name="priority" class="filter-select">
+        <option value="All Priorities" {% if request.args.get('priority') == 'All Priorities' or not request.args.get('priority') %}selected{% endif %}>All Priorities</option>
+        <option value="Critical" {% if request.args.get('priority') == 'Critical' %}selected{% endif %}>Critical</option>
+        <option value="High" {% if request.args.get('priority') == 'High' %}selected{% endif %}>High</option>
+        <option value="Medium" {% if request.args.get('priority') == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="Low" {% if request.args.get('priority') == 'Low' %}selected{% endif %}>Low</option>
+    </select>
+
+    <select name="incident_type" class="filter-select">
+        <option value="All Types" {% if request.args.get('incident_type') == 'All Types' or not request.args.get('incident_type') %}selected{% endif %}>All Types</option>
+        <option value="Phishing" {% if request.args.get('incident_type') == 'Phishing' %}selected{% endif %}>Phishing</option>
+        <option value="Malware" {% if request.args.get('incident_type') == 'Malware' %}selected{% endif %}>Malware</option>
+        <option value="Data Breach" {% if request.args.get('incident_type') == 'Data Breach' %}selected{% endif %}>Data Breach</option>
+        <option value="Ransomware" {% if request.args.get('incident_type') == 'Ransomware' %}selected{% endif %}>Ransomware</option>
+        <option value="Unauthorized Access" {% if request.args.get('incident_type') == 'Unauthorized Access' %}selected{% endif %}>Unauthorized Access</option>
+        <option value="DDoS" {% if request.args.get('incident_type') == 'DDoS' %}selected{% endif %}>DDoS</option>
+        <option value="Insider Threat" {% if request.args.get('incident_type') == 'Insider Threat' %}selected{% endif %}>Insider Threat</option>
+        <option value="Other" {% if request.args.get('incident_type') == 'Other' %}selected{% endif %}>Other</option>
+    </select>
+
+    <select name="assigned_to" class="filter-select">
+        <option value="Anyone" {% if request.args.get('assigned_to') == 'Anyone' or not request.args.get('assigned_to') %}selected{% endif %}>Anyone</option>
+        <option value="Unassigned" {% if request.args.get('assigned_to') == 'Unassigned' %}selected{% endif %}>Unassigned</option>
+        {% for a in analysts %}
+        <option value="{{ a.id }}" {% if request.args.get('assigned_to')|string == a.id|string %}selected{% endif %}>{{ a.full_name }}</option>
+        {% endfor %}
+    </select>
+
+    {% if active_filters > 0 %}
+    <span class="filter-active-badge">{{ active_filters }} filters active</span>
+    <button type="button" class="clear-filters-btn" id="clearFiltersBtn">Clear Filters</button>
+    {% endif %}
+</form>
+
+<div class="table-container">
+    {% if incidents|length == 0 %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <div>No incidents found matching your criteria.</div>
+    </div>
+    {% else %}
+    <table class="incidents-table">
+        <thead>
+            <tr>
+                <th data-sort="incident_id" class="sortable">Incident ID <span class="sort-indicator {% if sort == 'incident_id' %}active{% endif %}">{{ '▼' if sort == 'incident_id' and order == 'desc' else ('▲' if sort == 'incident_id' else '▼') }}</span></th>
+                <th data-sort="title" class="sortable">Title <span class="sort-indicator {% if sort == 'title' %}active{% endif %}">{{ '▼' if sort == 'title' and order == 'desc' else ('▲' if sort == 'title' else '▼') }}</span></th>
+                <th data-sort="incident_type" class="sortable">Type <span class="sort-indicator {% if sort == 'incident_type' %}active{% endif %}">{{ '▼' if sort == 'incident_type' and order == 'desc' else ('▲' if sort == 'incident_type' else '▼') }}</span></th>
+                <th data-sort="priority" class="sortable">Priority <span class="sort-indicator {% if sort == 'priority' %}active{% endif %}">{{ '▼' if sort == 'priority' and order == 'desc' else ('▲' if sort == 'priority' else '▼') }}</span></th>
+                <th data-sort="status" class="sortable">Status <span class="sort-indicator {% if sort == 'status' %}active{% endif %}">{{ '▼' if sort == 'status' and order == 'desc' else ('▲' if sort == 'status' else '▼') }}</span></th>
+                <th data-sort="risk_score" class="sortable">Risk Score <span class="sort-indicator {% if sort == 'risk_score' %}active{% endif %}">{{ '▼' if sort == 'risk_score' and order == 'desc' else ('▲' if sort == 'risk_score' else '▼') }}</span></th>
+                <th title="Correlation cluster">Corr</th>
+                <th title="Similarity match">Sim</th>
+                <th data-sort="affected_asset" class="sortable">Asset <span class="sort-indicator {% if sort == 'affected_asset' %}active{% endif %}">{{ '▼' if sort == 'affected_asset' and order == 'desc' else ('▲' if sort == 'affected_asset' else '▼') }}</span></th>
+                <th>Assigned To</th>
+                <th data-sort="reported_date" class="sortable">Reported Date <span class="sort-indicator {% if sort == 'reported_date' %}active{% endif %}">{{ '▼' if sort == 'reported_date' and order == 'desc' else ('▲' if sort == 'reported_date' else '▼') }}</span></th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inc in incidents %}
+            <tr>
+                <td><a href="/incidents/{{ inc.incident_id }}" class="incident-id-link">{{ inc.incident_id }}</a></td>
+                <td>{{ inc.title[:40] }}{% if inc.title|length > 40 %}...{% endif %}</td>
+                <td><span class="type-dot"></span> {{ inc.incident_type }}</td>
+                <td>
+                    <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span>
+                </td>
+                <td>
+                    <span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span>
+                </td>
+                <td>
+                    <div style="font-weight: 600; font-size: 0.9rem;">{{ inc.risk_score }}</div>
+                    <div class="risk-score-bar">
+                        {% set color = '#16a34a' %}
+                        {% if inc.priority == 'Critical' %}{% set color = '#dc2626' %}
+                        {% elif inc.priority == 'High' %}{% set color = '#ea580c' %}
+                        {% elif inc.priority == 'Medium' %}{% set color = '#2563eb' %}{% endif %}
+                        <div class="risk-score-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};"></div>
+                    </div>
+                </td>
+                <td class="algo-col">
+                    {% if inc.cluster_id %}
+                        <a href="/correlation/{{ inc.cluster_id }}" class="algo-icon" style="color:#7c3aed;" title="In cluster {{ inc.cluster_id }}">🔗</a>
+                    {% else %}
+                        <span style="color:#94a3b8;">—</span>
+                    {% endif %}
+                </td>
+                <td class="algo-col">
+                    {% if inc.similar_incident_id %}
+                        {% set score = (inc.similarity_score * 100)|round|int if inc.similarity_score else 0 %}
+                        <span class="algo-icon" style="color: {% if score >= 75 %}#16a34a{% else %}#2563eb{% endif %};" title="{{ score }}% match with {{ inc.similar_incident_id }}">🔍</span>
+                    {% else %}
+                        <span style="color:#94a3b8;">—</span>
+                    {% endif %}
+                </td>
+                <td>{{ inc.affected_asset }}</td>
+                <td style="color: {{ '#94a3b8' if not inc.assigned_name else 'inherit' }}">{{ inc.assigned_name or 'Unassigned' }}</td>
+                <td>{{ inc.reported_date[:10] }}</td>
+                <td>
+                    <div style="display:flex; gap:6px;">
+                        <a href="/incidents/{{ inc.incident_id }}" class="btn-primary" style="padding:4px 8px; text-decoration:none; font-size:0.75rem;">View</a>
+                        
+                        {% if current_user.role in ['Admin', 'Analyst'] and inc.status != 'Closed' %}
+                        <a href="/incidents/edit/{{ inc.incident_id }}" class="btn-secondary" style="padding:4px 8px; text-decoration:none; font-size:0.75rem; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Edit</a>
+                        {% endif %}
+                        
+                        {% if current_user.role == 'Admin' %}
+                        <button type="button" class="btn-delete table-delete-btn" data-incident-id="{{ inc.incident_id }}" data-incident-title="{{ inc.title }}" style="padding:4px 8px; font-size:0.75rem; background:#dc2626; color:white; border:none; cursor:pointer; border-radius:4px;">✕</button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <div class="pagination-bar">
+        {% set start_item = (page - 1) * per_page + 1 if total_count > 0 else 0 %}
+        {% set end_item = start_item + incidents|length - 1 if total_count > 0 else 0 %}
+        <div style="font-size: 0.85rem; color: #64748b;">
+            Showing <span id="pagStartItem">{{ start_item }}</span>-<span id="pagEndItem">{{ end_item }}</span> of <span id="pagTotalItem">{{ total_count }}</span> incidents
+        </div>
+        
+        <div style="display:flex; gap: 8px; align-items:center;">
+            {% set total_pages = (total_count // per_page) + (1 if total_count % per_page > 0 else 0) %}
+            
+            {% if page > 1 %}
+            <button class="page-btn" data-page="{{ page - 1 }}">Previous</button>
+            {% endif %}
+            
+            {% for p in range(1, total_pages + 1) %}
+                {% if p >= page - 2 and p <= page + 2 %}
+                <button class="page-btn {% if p == page %}active{% endif %}" data-page="{{ p }}">{{ p }}</button>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <button class="page-btn" data-page="{{ page + 1 }}">Next</button>
+            {% endif %}
+            
+            <select id="perPageSelect" class="per-page-selector">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10 / page</option>
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100 / page</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModalOverlay" style="display: none;">
+    <div class="delete-modal-box">
+        <div class="delete-modal-warning-icon">⚠️</div>
+        <div class="delete-modal-title">Delete Incident</div>
+        <p class="delete-modal-message">Are you sure you want to delete <strong id="deleteIncidentName"></strong>?</p>
+        <p class="delete-modal-danger-text">This action cannot be undone. All related alerts will also be deleted.</p>
+        
+        <div class="delete-modal-buttons">
+            <button type="button" class="btn-secondary" id="deleteModalCancel">Cancel</button>
+            <button type="button" class="btn-confirm-delete" id="deleteModalConfirm">Delete Incident</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/incidents.js') }}"></script>
+{% endblock %}

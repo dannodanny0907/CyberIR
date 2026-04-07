@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ cluster.cluster_id }}{% endblock %}
+{% block page_title %}Cluster {{ cluster.cluster_id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/correlation.css') }}">
+{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 65fr 35fr; gap: 20px; align-items: start;">
+    
+    <div class="left-col">
+        <!-- Card 1 -->
+        <div class="card">
+            <div class="cluster-id-text" style="font-size: 1.2rem; font-weight:800; color:var(--text-secondary);">{{ cluster.cluster_id }}</div>
+            <h2 style="font-size: 1.8rem; margin: 4px 0 16px 0; color: var(--text-primary);">{{ cluster.cluster_name }}</h2>
+            
+            <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                <span class="badge priority-{{ cluster.severity|lower }}">{{ cluster.severity }} Cluster</span>
+                <span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}">{{ cluster.status }}</span>
+                <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">{{ cluster.primary_type }} Primary</span>
+            </div>
+            
+            <div style="font-size: 0.9rem; color: var(--text-secondary); display:flex; flex-direction:column; gap:8px;">
+                <div>First detected: <span style="color:var(--text-primary); font-weight:500;">{{ cluster.first_detected[:19] }}</span></div>
+                <div>Last updated: <span class="time-ago" data-time="{{ cluster.last_updated }}" style="color:var(--text-primary); font-weight:500;"></span></div>
+                <div>Total incidents: <b style="color:var(--primary);">{{ cluster.incident_count }}</b></div>
+            </div>
+        </div>
+
+        <!-- Card 2 (Incidents) -->
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 14px;">
+                <div class="card-section-title" style="border:none; padding:0; margin:0;">Incidents in Cluster</div>
+                <span class="badge" style="background:var(--primary); color:white; border-radius:20px; padding:2px 8px;">{{ cluster.incident_count }}</span>
+            </div>
+            
+            <div style="overflow-x:auto;">
+                <table class="minimal-table">
+                    <thead>
+                        <tr>
+                            <th>Incident ID</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Risk Score</th>
+                            <th>Date</th>
+                            <th>Algorithm Match</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inc in incidents %}
+                        <tr id="row-{{ inc.incident_id }}">
+                            <td><a href="/incidents/{{ inc.incident_id }}" style="font-family:monospace; font-weight:600; text-decoration:none;">{{ inc.incident_id }}</a></td>
+                            <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ inc.title }}</td>
+                            <td>{{ inc.incident_type }}</td>
+                            <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                            <td><span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span></td>
+                            <td style="font-weight:700;">{{ inc.risk_score }}</td>
+                            <td>{{ inc.reported_date[:10] }}</td>
+                            <td style="color:var(--primary); font-weight:700;">{{ (inc.correlation_score * 100)|round|int }}%</td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+                                    <a href="/incidents/{{ inc.incident_id }}" class="btn-primary" style="padding:4px 8px; text-decoration:none; font-size:0.75rem;">View</a>
+                                    {% if current_user.role in ['Admin'] %}
+                                    <button class="remove-incident-btn" data-incident-id="{{ inc.incident_id }}" data-incident-db="{{ inc.id }}">Remove</button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Card 3 (Notes) -->
+        <div class="card">
+            <div class="card-section-title">Investigation Notes</div>
+            
+            <div id="notesContainer">
+                {% if cluster.notes %}
+                    {% for line in cluster.notes.split('\n') %}
+                        {% if line.strip() %}
+                            <div class="note-display">
+                                {% set parts = line.split(']: ', 1) %}
+                                {% if parts|length == 2 %}
+                                    {% set prefix = parts[0] + ']' %}
+                                    {% set content = parts[1] %}
+                                    {% set dt_end = prefix.find('] [') %}
+                                    {% if dt_end > 0 %}
+                                        <div style="display:flex; gap:8px; align-items:baseline;">
+                                            <span class="note-timestamp">{{ prefix[1:dt_end] }}</span>
+                                            <span class="note-user">{{ prefix[dt_end+3:-1] }}</span>
+                                        </div>
+                                    {% else %}
+                                        <div class="note-user">{{ prefix }}</div>
+                                    {% endif %}
+                                    <div class="note-text">{{ content }}</div>
+                                {% else %}
+                                    <div class="note-text">{{ line }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div id="noNotesMsg" style="color:#94a3b8; font-size:0.875rem; font-style:italic;">No notes available.</div>
+                {% endif %}
+            </div>
+            
+            {% if current_user.role in ['Admin', 'Analyst'] %}
+            <form id="addNoteForm" class="note-add-form" data-cluster-id="{{ cluster.cluster_id }}">
+                <textarea name="note" id="noteInput" rows="3" style="width:100%; border:1px solid var(--border-color); border-radius:6px; padding:8px; font-family:inherit; font-size:0.875rem; margin-bottom:8px; box-sizing:border-box;" placeholder="Add investigation note..." required></textarea>
+                <button type="submit" class="btn-primary" style="padding:8px 16px;">Add Note</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+
+    <div class="right-col">
+        <a href="/correlation" style="color:var(--text-secondary); text-decoration:none; font-size:0.85rem; font-weight:600; display:inline-block; margin-bottom:12px;">← Back to All Clusters</a>
+        
+        <!-- Right Card 1 -->
+        <div class="card">
+            <div class="card-section-title">Cluster Details</div>
+            <div class="detail-row"><span class="detail-label">Cluster ID</span><span class="detail-value" style="font-family:monospace; font-weight:bold;">{{ cluster.cluster_id }}</span></div>
+            <div class="detail-row"><span class="detail-label">Primary Incident Type</span><span class="detail-value">{{ cluster.primary_type }}</span></div>
+            <div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value"><span class="badge priority-{{ cluster.severity|lower }}">{{ cluster.severity }}</span></span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}">{{ cluster.status }}</span></span></div>
+            <div class="detail-row"><span class="detail-label">First Detected</span><span class="detail-value">{{ cluster.first_detected[:10] }}</span></div>
+            <div class="detail-row"><span class="detail-label">Last Updated</span><span class="detail-value time-ago" data-time="{{ cluster.last_updated }}"></span></div>
+            <div class="detail-row" style="border:none;"><span class="detail-label">Total Incidents</span><span class="detail-value" style="font-weight:700;">{{ cluster.incident_count }}</span></div>
+        </div>
+
+        <!-- Right Card 2 -->
+        <div class="card">
+            <div class="card-section-title">Status Management</div>
+            <div style="text-align:center; margin-bottom:16px;">
+                <span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}" style="font-size: 1.1rem; padding: 8px 24px;">{{ cluster.status }}</span>
+            </div>
+            
+            {% if current_user.role in ['Admin', 'Analyst'] %}
+                <form class="status-form" data-cluster-id="{{ cluster.cluster_id }}">
+                {% if cluster.status == 'Active' %}
+                    <button type="submit" data-status="Investigating" class="status-action-btn" style="background:#ea580c; color:white; border:none; cursor:pointer;">Start Investigation</button>
+                {% elif cluster.status == 'Investigating' %}
+                    <button type="submit" data-status="Resolved" class="status-action-btn" style="background:#16a34a; color:white; border:none; cursor:pointer;">Mark as Resolved</button>
+                    <div style="font-size:0.75rem; color:#dc2626; text-align:center; margin-top:8px;">⚠️ This will also mark all unresolved incidents in this cluster as Resolved.</div>
+                {% elif cluster.status == 'Resolved' %}
+                    <button type="submit" data-status="Active" class="status-action-btn" style="background:#64748b; color:white; border:none; cursor:pointer;">Reopen</button>
+                {% endif %}
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Right Card 3 -->
+        <div class="card">
+            <div class="card-section-title">Assignment</div>
+            <div style="font-size:0.9rem; margin-bottom:12px;">Currently assigned to: <strong id="assignedNameDisplay">{{ cluster.assigned_name or 'Unassigned' }}</strong></div>
+            
+            {% if current_user.role in ['Admin', 'Analyst'] %}
+            <form id="assignForm" class="assign-dropdown-row" data-cluster-id="{{ cluster.cluster_id }}">
+                <select name="assigned_to" class="assign-select">
+                    <option value="">-- Unassigned --</option>
+                    {% for a in analysts %}
+                    <option value="{{ a.id }}" {% if cluster.assigned_to == a.id %}selected{% endif %}>{{ a.full_name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-primary" style="padding:6px 12px;">Save</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <!-- Right Card 4 -->
+        <div class="card">
+            <div class="card-section-title">Related Alerts</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                {% for alert in alerts %}
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.75rem;">
+                            <span style="font-weight:700; color:{{ '#dc2626' if alert.severity == 'CRITICAL' else '#ea580c' }}">
+                                {{ '🚨' if alert.severity == 'CRITICAL' else '⚠️' }} {{ alert.severity }}
+                            </span>
+                            <span class="time-ago" data-time="{{ alert.created_at }}" style="color:var(--text-secondary);"></span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-primary); line-height:1.4;">{{ alert.message }}</div>
+                    </div>
+                {% else %}
+                    <div style="color:var(--text-secondary); font-size:0.875rem; font-style:italic;">No alerts for this cluster</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.CLUSTER_ID = "{{ cluster.cluster_id }}";
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/correlation.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Incident Correlation{% endblock %}
+{% block page_title %}Incident Correlation{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/correlation.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="stats-bar">
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #9333ea;">🔗</div>
+        <div>
+            <div class="stat-count">{{ stats.total_clusters }}</div>
+            <div class="stat-label">Total Clusters</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #dc2626;">🔴</div>
+        <div>
+            <div class="stat-count">{{ stats.active_clusters }}</div>
+            <div class="stat-label">Active Clusters</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #ea580c;">🔍</div>
+        <div>
+            <div class="stat-count">{{ stats.investigating_clusters }}</div>
+            <div class="stat-label">Investigating</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="color: #16a34a;">✅</div>
+        <div>
+            <div class="stat-count">{{ stats.resolved_clusters }}</div>
+            <div class="stat-label">Resolved</div>
+        </div>
+    </div>
+</div>
+
+<div class="info-banner">
+    {% if stats.total_clusters == 0 %}
+    No correlation clusters detected yet. Clusters are created automatically when related incidents are logged.
+    {% else %}
+    🔗 <strong>{{ stats.total_correlated_incidents }}</strong> incidents have been automatically grouped into <strong>{{ stats.total_clusters }}</strong> clusters by the correlation algorithm.
+    {% endif %}
+</div>
+
+<form id="filterForm" action="/correlation" method="GET" class="filter-bar">
+    <input type="hidden" name="search" id="hiddenSearch" value="{{ request.args.get('search', '') }}">
+    
+    <select name="status" class="filter-select">
+        <option value="All Statuses" {% if request.args.get('status') == 'All Statuses' or not request.args.get('status') %}selected{% endif %}>All Statuses</option>
+        <option value="Active" {% if request.args.get('status') == 'Active' %}selected{% endif %}>Active</option>
+        <option value="Investigating" {% if request.args.get('status') == 'Investigating' %}selected{% endif %}>Investigating</option>
+        <option value="Resolved" {% if request.args.get('status') == 'Resolved' %}selected{% endif %}>Resolved</option>
+    </select>
+
+    <select name="severity" class="filter-select">
+        <option value="All Severities" {% if request.args.get('severity') == 'All Severities' or not request.args.get('severity') %}selected{% endif %}>All Severities</option>
+        <option value="Critical" {% if request.args.get('severity') == 'Critical' %}selected{% endif %}>Critical</option>
+        <option value="High" {% if request.args.get('severity') == 'High' %}selected{% endif %}>High</option>
+        <option value="Medium" {% if request.args.get('severity') == 'Medium' %}selected{% endif %}>Medium</option>
+        <option value="Low" {% if request.args.get('severity') == 'Low' %}selected{% endif %}>Low</option>
+    </select>
+    
+    <select name="type" class="filter-select">
+        <option value="All Types" {% if request.args.get('type') == 'All Types' or not request.args.get('type') %}selected{% endif %}>All Types</option>
+        <option value="Phishing" {% if request.args.get('type') == 'Phishing' %}selected{% endif %}>Phishing</option>
+        <option value="Malware" {% if request.args.get('type') == 'Malware' %}selected{% endif %}>Malware</option>
+        <option value="Data Breach" {% if request.args.get('type') == 'Data Breach' %}selected{% endif %}>Data Breach</option>
+        <option value="Ransomware" {% if request.args.get('type') == 'Ransomware' %}selected{% endif %}>Ransomware</option>
+        <option value="Unauthorized Access" {% if request.args.get('type') == 'Unauthorized Access' %}selected{% endif %}>Unauthorized Access</option>
+        <option value="DDoS" {% if request.args.get('type') == 'DDoS' %}selected{% endif %}>DDoS</option>
+        <option value="Insider Threat" {% if request.args.get('type') == 'Insider Threat' %}selected{% endif %}>Insider Threat</option>
+        <option value="Other" {% if request.args.get('type') == 'Other' %}selected{% endif %}>Other</option>
+    </select>
+
+    <div class="search-box" style="margin-left: auto;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search clusters..." value="{{ request.args.get('search', '') }}">
+    </div>
+</form>
+
+{% if clusters|length == 0 %}
+<div class="empty-state">
+    <div class="empty-state-icon">🔗</div>
+    <div style="font-weight: 700; color: var(--text-primary); font-size:1.2rem; margin-bottom:8px;">No clusters found</div>
+    <div>Correlation clusters appear here automatically when related incidents are detected</div>
+</div>
+{% else %}
+<div class="clusters-grid">
+    {% for c in clusters %}
+    <div class="cluster-card severity-{{ c.severity|lower }}" data-href="/correlation/{{ c.cluster_id }}">
+        
+        <div class="cluster-card-top">
+            <div style="display:flex; justify-content: space-between; margin-bottom:4px;">
+                <div class="cluster-id-text">{{ c.cluster_id }}</div>
+                <div style="display:flex; gap:6px;">
+                    <span class="badge priority-{{ c.severity|lower }}">{{ c.severity }}</span>
+                    <span class="badge status-{{ c.status|lower|replace(' ', '-') }}">{{ c.status }}</span>
+                </div>
+            </div>
+            <div class="cluster-name">{{ c.cluster_name }}</div>
+            <div class="cluster-meta">
+                First detected: {{ c.first_detected[:16] }} &nbsp;•&nbsp; Last updated: <span class="time-ago" data-time="{{ c.last_updated }}"></span>
+            </div>
+        </div>
+        
+        <div class="cluster-incident-pills">
+            {% for inc in c.incidents[:4] %}
+                <a href="/incidents/{{ inc.incident_id }}" class="incident-pill pill-{{ inc.priority|lower }}" onclick="event.stopPropagation();">{{ inc.incident_id }}</a>
+            {% endfor %}
+            {% if c.incidents|length > 4 %}
+                <span class="incident-pill pill-more">+{{ c.incidents|length - 4 }} more</span>
+            {% endif %}
+        </div>
+        
+        <div class="cluster-card-bottom">
+            <div class="cluster-stats-text">
+                <span>📊 {{ c.incident_count }} incidents</span>
+                <span>📌 {{ c.primary_type }}</span>
+            </div>
+            <a href="/correlation/{{ c.cluster_id }}" class="view-details-btn">View Details →</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/correlation.js') }}"></script>
+{% endblock %}

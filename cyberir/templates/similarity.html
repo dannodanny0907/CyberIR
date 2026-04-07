@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}Incident Similarity{% endblock %}
+{% block page_title %}Incident Similarity{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/similarity.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Stats Bar -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon-circle icon-blue">🔍</div>
+        <div>
+            <div class="metric-count">{{ total_with_similarity }}</div>
+            <div class="metric-label">Incidents with Matches</div>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon-circle icon-green">✅</div>
+        <div>
+            <div class="metric-count">{{ high_confidence }}</div>
+            <div class="metric-label">High Confidence (>=75%)</div>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon-circle icon-purple">💡</div>
+        <div>
+            <div class="metric-count">{{ solution_applied }}</div>
+            <div class="metric-label">Solutions Applied</div>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon-circle icon-orange">📊</div>
+        <div>
+            <div class="metric-count">{{ avg_similarity }}%</div>
+            <div class="metric-label">Avg Similarity Score</div>
+        </div>
+    </div>
+</div>
+
+<!-- Info Banner -->
+{% if total_with_similarity == 0 %}
+<div class="info-banner" style="background: #f8fafc; border: 1px solid var(--border-color); color: #64748b;">
+    No similarity matches yet. Matches appear here automatically when new incidents are logged and similar resolved incidents exist in the system.
+</div>
+{% else %}
+<div class="info-banner">
+    🔍 The similarity algorithm has analyzed <strong>{{ total_with_similarity }}</strong> incidents and found historical matches. <strong>{{ solution_applied }}</strong> solution(s) have been applied from past incidents.
+</div>
+{% endif %}
+
+<!-- Filters (Visual Shell for JS Auto-Submit structure) -->
+<div class="filter-bar" style="margin-bottom:20px; display:flex; gap:10px;">
+    <!-- Stubbed for UI alignment, handled mostly in JS or manually via URL params -->
+    <select class="filter-select"><option>All Confidence</option></select>
+    <select class="filter-select"><option>All Types</option></select>
+    <select class="filter-select"><option>All Statuses</option></select>
+    <select class="filter-select"><option>All Solutions</option></select>
+    <input type="text" placeholder="Search matches..." class="filter-input" style="flex:1;">
+</div>
+
+{% if incidents|length == 0 %}
+<div class="empty-state">
+    <div class="empty-state-icon">🔍</div>
+    <div style="font-weight:700; color:var(--text-primary); font-size:1.2rem; margin-bottom:8px;">No similarity matches found</div>
+    <div style="color:var(--text-secondary);">Matches appear automatically when new incidents are logged against resolved footprints.</div>
+</div>
+{% else %}
+<div class="similarity-list">
+    {% for inc in incidents %}
+    {% set score = (inc.similarity_score * 100)|round|int %}
+    {% set s_color_class = 'score-low' %}
+    {% set f_color_class = 'fill-low' %}
+    {% if score >= 75 %}
+        {% set s_color_class = 'score-high' %}
+        {% set f_color_class = 'fill-high' %}
+    {% elif score >= 50 %}
+        {% set s_color_class = 'score-medium' %}
+        {% set f_color_class = 'fill-medium' %}
+    {% endif %}
+    
+    <div class="similarity-card">
+        <div class="similarity-card-top-bar">
+            <div class="similarity-label">SIMILARITY MATCH</div>
+            <div class="similarity-score-large {{ s_color_class }}">{{ score }}%</div>
+            <div class="similarity-progress-bar-container">
+                <div class="similarity-progress-fill {{ f_color_class }} sim-fill" style="width:0%;" data-width="{{ score }}"></div>
+            </div>
+        </div>
+        
+        <div class="comparison-grid">
+            <div class="comparison-column comparison-column-left">
+                <div class="comparison-header">CURRENT INCIDENT</div>
+                <a href="/incidents/{{ inc.incident_id }}" class="comparison-incident-id">{{ inc.incident_id }}</a>
+                <div class="comparison-title">{{ inc.title[:40] }}{% if inc.title|length > 40 %}...{% endif %}</div>
+                <div class="comparison-field-row">Type: <span class="badge" style="background:#f1f5f9; color:#475569;">{{ inc.incident_type }}</span></div>
+                <div class="comparison-field-row">Priority: <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></div>
+                <div class="comparison-field-row">Status: <span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span></div>
+                <div class="comparison-field-row">Asset: <span style="font-weight:600; color:var(--text-primary);">{{ inc.affected_asset }}</span></div>
+            </div>
+            
+            <div class="comparison-column">
+                <div class="comparison-header">SIMILAR PAST INCIDENT</div>
+                <a href="/incidents/{{ inc.similar_to_id }}" class="comparison-incident-id" style="color:#64748b;">{{ inc.similar_to_id }}</a>
+                <div class="comparison-title">{{ inc.similar_to_title[:40] }}{% if inc.similar_to_title|length > 40 %}...{% endif %}</div>
+                <div class="comparison-field-row">Type: <span class="badge" style="background:#f1f5f9; color:#475569;">{{ inc.incident_type }}</span></div>
+                <div class="comparison-field-row">Priority: <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></div>
+                <div class="comparison-field-row">Status: <span class="badge" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;">✅ {{ inc.similar_status }}</span></div>
+                <div class="comparison-field-row">Asset: <span style="font-weight:600; color:var(--text-primary);">{{ inc.affected_asset }}</span></div>
+                
+                {% if inc.similar_resolution %}
+                <div class="resolution-preview-text">
+                    "{{ inc.similar_resolution[:60] }}{% if inc.similar_resolution|length > 60 %}...{% endif %}"
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="similarity-card-bottom-bar">
+            <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-secondary);">Why similar:</div>
+            <div class="why-similar-tags-container">
+                <span class="why-similar-tag">Computational Output</span>
+            </div>
+            
+            <div class="action-buttons-row">
+                <a href="/incidents/{{ inc.incident_id }}" class="btn-secondary" style="font-size:0.8rem; padding:6px 12px; text-decoration:none;">View Current</a>
+                <a href="/incidents/{{ inc.similar_to_id }}" class="btn-secondary" style="font-size:0.8rem; padding:6px 12px; text-decoration:none;">View Past</a>
+                
+                {% if inc.solution_applied_from %}
+                    <div class="solution-applied-badge">Solution Applied ✓</div>
+                {% elif inc.similar_resolution and inc.status not in ['Resolved', 'Closed'] and current_user.role in ['Admin', 'Analyst'] %}
+                    <button class="btn-primary apply-solution-trigger" 
+                        data-incident-id="{{ inc.incident_id }}" 
+                        data-source-id="{{ inc.similar_to_id }}" 
+                        data-resolution="{{ inc.similar_resolution|urlencode }}"
+                        style="background:#16a34a; border-color:#16a34a; font-size:0.8rem; padding:6px 12px;">
+                        Apply Solution
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Apply Solution Modal -->
+<div class="modal-overlay" id="applySolutionOverlay" style="display: none;">
+    <div class="delete-modal-box" style="width: 520px; text-align: left;">
+        <div style="font-weight:700; font-size:1.1rem; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:14px; text-align:center;">Apply Solution from <span id="applySourceId"></span></div>
+        
+        <div class="source-resolution-box">
+            <div style="font-weight:600; margin-bottom:4px; font-size:0.75rem; text-transform:uppercase;">Resolution from <span id="applySourceIdLabel"></span>:</div>
+            <div id="applySourceResolutionText" style="white-space:pre-wrap; font-size:0.85rem; color:var(--text-secondary); background:#f8fafc; padding:10px; border:1px solid var(--border-color); border-radius:6px; max-height:100px; overflow-y:auto;"></div>
+        </div>
+        
+        <form id="applySolutionForm">
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.85rem; font-weight:600; color:var(--text-primary);">Resolution notes for this incident:</label>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">You can edit before applying</div>
+                <textarea id="applyResolutionNotes" rows="4" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:10px; font-size:0.85rem;" required></textarea>
+            </div>
+            
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn-secondary" id="applySolutionCancel">Cancel</button>
+                <button type="submit" class="apply-solution-btn-confirm" style="background:#16a34a; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;">Apply Solution</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/similarity.js') }}"></script>
+{% endblock %}

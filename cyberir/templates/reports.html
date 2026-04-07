@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports & Analytics{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- SECTION 1 Algorithm Performance Report -->
+<div class="card" style="margin-bottom: 24px;">
+    <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">🤖 Algorithm Performance Summary</h2>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">Real-time metrics for both core algorithms</div>
+    </div>
+
+    <div class="algorithm-grid">
+        <!-- LEFT: Correlation Algorithm -->
+        <div class="algorithm-col">
+            <div class="algo-header">🔗 Correlation Engine</div>
+            
+            <div class="metric-row">
+                <span class="metric-label">Total Clusters Created:</span>
+                <span class="metric-value">{{ metrics.total_clusters_created }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Active Clusters:</span>
+                <span class="metric-value">{{ metrics.active_clusters }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Resolved Clusters:</span>
+                <span class="metric-value">{{ metrics.resolved_clusters }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Total Correlated Incidents:</span>
+                <span class="metric-value">{{ metrics.total_correlated_incidents }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Avg Cluster Size:</span>
+                <span class="metric-value">{{ metrics.avg_cluster_size|round(1) }} incidents</span>
+            </div>
+            <div class="metric-row" style="border-bottom:none;">
+                <span class="metric-label">Largest Cluster:</span>
+                <span class="metric-value">{{ metrics.largest_cluster }} incidents</span>
+            </div>
+
+            <div class="perf-bar-container">
+                <div class="perf-bar-label">
+                    <span>Correlation Coverage</span>
+                    {% set cov = 0 %}
+                    {% if metrics.total_incidents > 0 %}
+                        {% set cov = (metrics.total_correlated_incidents / metrics.total_incidents * 100)|round|int %}
+                    {% endif %}
+                    <span>{{ cov }}%</span>
+                </div>
+                <div class="perf-bar-track">
+                    <div class="perf-fill" data-width="{{ cov }}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Similarity Algorithm -->
+        <div class="algorithm-col">
+            <div class="algo-header">🔍 Similarity Engine</div>
+            
+            <div class="metric-row">
+                <span class="metric-label">Total Matches Found:</span>
+                <span class="metric-value">{{ metrics.total_matches_found }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">High Confidence (&gt;=75%):</span>
+                <span class="metric-value">{{ metrics.high_confidence }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Medium Confidence (50-74%):</span>
+                <span class="metric-value">{{ metrics.medium_confidence }}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Solutions Applied:</span>
+                <span class="metric-value">{{ metrics.solutions_applied }}</span>
+            </div>
+            <div class="metric-row" style="border-bottom:none;">
+                <span class="metric-label">Avg Similarity Score:</span>
+                <span class="metric-value">{{ (metrics.avg_similarity_score * 100)|round|int }}%</span>
+            </div>
+
+            <div class="perf-bar-container" style="margin-top: 50px;">
+                <div class="perf-bar-label">
+                    <span>Solution Reuse Rate</span>
+                    {% set rr = 0 %}
+                    {% if metrics.total_matches_found > 0 %}
+                        {% set rr = (metrics.solutions_applied / metrics.total_matches_found * 100)|round|int %}
+                    {% endif %}
+                    <span>{{ rr }}%</span>
+                </div>
+                <div class="perf-bar-track">
+                    <div class="perf-fill" data-width="{{ rr }}" style="background: #16a34a;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 2 Incident Statistics -->
+<div class="card" style="margin-bottom: 24px;">
+    <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">📋 Incident Statistics</h2>
+    </div>
+
+    <div class="stats-grid">
+        <!-- LEFT: By Status -->
+        <div>
+            <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">By Status</div>
+            
+            <!-- Open -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge status-open">Open</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.open_count }}</div>
+                {% set open_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set open_pct = (metrics.open_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ open_pct }}" style="background: #dc2626;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ open_pct }}%</div>
+            </div>
+
+            <!-- Investigating -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge status-investigating">Investigating</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.investigating_count }}</div>
+                {% set inv_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set inv_pct = (metrics.investigating_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ inv_pct }}" style="background: #ea580c;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ inv_pct }}%</div>
+            </div>
+
+            <!-- Resolved -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge status-resolved">Resolved</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.resolved_count }}</div>
+                {% set res_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set res_pct = (metrics.resolved_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ res_pct }}" style="background: #16a34a;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ res_pct }}%</div>
+            </div>
+
+            <!-- Closed -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge status-closed">Closed</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.closed_count }}</div>
+                {% set clo_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set clo_pct = (metrics.closed_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ clo_pct }}" style="background: #64748b;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ clo_pct }}%</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: By Priority -->
+        <div>
+            <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">By Priority</div>
+            
+            <!-- Critical -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge priority-critical">Critical</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.critical_count }}</div>
+                {% set crit_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set crit_pct = (metrics.critical_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ crit_pct }}" style="background: #dc2626;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ crit_pct }}%</div>
+            </div>
+
+            <!-- High -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge priority-high">High</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.high_count }}</div>
+                {% set high_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set high_pct = (metrics.high_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ high_pct }}" style="background: #ea580c;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ high_pct }}%</div>
+            </div>
+
+            <!-- Medium -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge priority-medium">Medium</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.medium_count }}</div>
+                {% set med_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set med_pct = (metrics.medium_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ med_pct }}" style="background: #2563eb;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ med_pct }}%</div>
+            </div>
+
+            <!-- Low -->
+            <div class="stat-status-row">
+                <div class="stat-row-label">
+                    <span class="badge priority-low">Low</span>
+                </div>
+                <div class="stat-row-count">{{ metrics.low_count }}</div>
+                {% set low_pct = 0 %}
+                {% if metrics.total_incidents > 0 %} {% set low_pct = (metrics.low_count / metrics.total_incidents * 100)|round|int %} {% endif %}
+                <div class="stat-row-bar-container">
+                    <div class="stat-fill" data-width="{{ low_pct }}" style="background: #16a34a;"></div>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ low_pct }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+        <div style="font-weight: 600; font-size: 0.95rem;">Average Resolution Time</div>
+        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">
+            {% if metrics.avg_resolution_time > 0 %}
+                Average time to resolve: {{ (metrics.avg_resolution_time // 60)|int }}h {{ (metrics.avg_resolution_time % 60)|int }}m
+            {% else %}
+                No resolved incidents yet
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 3 User Activity Summary -->
+<div class="card" style="padding: 0; margin-bottom: 24px;">
+    <div style="padding: 16px 20px;">
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0;">👥 User Activity</h2>
+    </div>
+    
+    {% if activity|length > 0 %}
+    <table class="dashboard-table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in activity %}
+            <tr>
+                <td style="font-weight: 500;">
+                    {{ a.full_name }}
+                    <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal; margin-left:4px;">{{ a.role }}</span>
+                </td>
+                <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ a.action_type }}</span></td>
+                <td>{{ a.target_type }} <span style="font-family:monospace; color:#64748b; font-size:0.8rem;">#{{ a.target_id }}</span></td>
+                <td class="activity-time" data-time="{{ a.created_at }}"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding: 30px; text-align: center; color: var(--text-secondary);">No recent activity logs.</div>
+    {% endif %}
+</div>
+
+<!-- SECTION 4 Export Data -->
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">📥 Export Data</h2>
+    </div>
+    
+    <div class="export-buttons-row">
+        <a href="/reports/export/incidents" class="export-button">
+            <span>📊</span> Export Incidents (CSV)
+        </a>
+        <a href="/reports/export/clusters" class="export-button">
+            <span>🔗</span> Export Clusters (CSV)
+        </a>
+        <a href="/reports/export/activity" class="export-button">
+            <span>👥</span> Export Activity Log (CSV)
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts{% endblock %}
+{% block page_title %}Alerts & Notifications{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/alerts.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<!-- TOP ACTION BAR -->
+<div class="alerts-action-bar">
+    <div style="display: flex; align-items: center;">
+        <h2 style="margin: 0; font-size: 1.5rem; color: var(--text-primary);">Alerts</h2>
+        {% if unread_count > 0 %}
+        <span class="unread-badge" id="unreadBadge">{{ unread_count }} unread</span>
+        {% endif %}
+        {% if critical_count > 0 %}
+        <span class="critical-badge" id="criticalBadge">{{ critical_count }} critical</span>
+        {% endif %}
+    </div>
+    
+    <div class="button-group">
+        <button id="markAllReadBtn" class="btn btn-outline" {% if unread_count == 0 %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+            Mark All as Read
+        </button>
+        <button id="dismissAllReadBtn" class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5;" {% if total_count == unread_count %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+            Clear Read Alerts
+        </button>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+    <div style="display: flex; gap: 8px;">
+        <button class="filter-tab active" data-filter="all">All</button>
+        <button class="filter-tab" data-filter="unread">Unread</button>
+        <button class="filter-tab" data-filter="read">Read</button>
+    </div>
+    
+    <form id="filterForm" method="GET" action="/alerts" style="display: flex; gap: 10px; align-items: center; margin-left: 10px;">
+        <select name="alert_type" class="filter-select" onchange="this.form.submit()">
+            <option value="All Types" {% if request.args.get('alert_type') == 'All Types' or not request.args.get('alert_type') %}selected{% endif %}>All Types</option>
+            <option value="High Priority" {% if request.args.get('alert_type') == 'High Priority' %}selected{% endif %}>High Priority</option>
+            <option value="Correlation" {% if request.args.get('alert_type') == 'Correlation' %}selected{% endif %}>Correlation</option>
+            <option value="Similarity" {% if request.args.get('alert_type') == 'Similarity' %}selected{% endif %}>Similarity</option>
+            <option value="SLA Breach" {% if request.args.get('alert_type') == 'SLA Breach' %}selected{% endif %}>SLA Breach</option>
+            <option value="Assignment" {% if request.args.get('alert_type') == 'Assignment' %}selected{% endif %}>Assignment</option>
+            <option value="Escalation" {% if request.args.get('alert_type') == 'Escalation' %}selected{% endif %}>Escalation</option>
+            <option value="System" {% if request.args.get('alert_type') == 'System' %}selected{% endif %}>System</option>
+        </select>
+        
+        <select name="severity" class="filter-select" onchange="this.form.submit()">
+            <option value="All Severities" {% if request.args.get('severity') == 'All Severities' or not request.args.get('severity') %}selected{% endif %}>All Severities</option>
+            <option value="Critical" {% if request.args.get('severity') == 'Critical' %}selected{% endif %}>Critical</option>
+            <option value="Warning" {% if request.args.get('severity') == 'Warning' %}selected{% endif %}>Warning</option>
+            <option value="Info" {% if request.args.get('severity') == 'Info' %}selected{% endif %}>Info</option>
+        </select>
+    </form>
+    
+    {% if request.args.get('alert_type') and request.args.get('alert_type') != 'All Types' or request.args.get('severity') and request.args.get('severity') != 'All Severities' %}
+    <div style="font-size: 0.85rem; color: #2563eb; margin-left: auto;">
+        Filters active • <a href="/alerts" style="color: #2563eb;">Clear</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ALERTS SUMMARY BAR -->
+{% if unread_count > 0 %}
+<div class="alerts-summary-bar">
+    You have {{ unread_count }} unread alert(s) — {{ critical_count }} require immediate attention
+</div>
+{% endif %}
+
+<!-- ALERTS LIST -->
+<div id="alertsList" class="alerts-list">
+    {% if not alerts %}
+        {% if request.args.get('alert_type') and request.args.get('alert_type') != 'All Types' or request.args.get('severity') and request.args.get('severity') != 'All Severities' %}
+        <div id="emptyState" class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <div class="empty-state-title">No alerts match your filters</div>
+            <div style="font-size: 0.9rem;"><a href="/alerts" style="color: #2563eb;">Clear filters</a></div>
+        </div>
+        {% else %}
+        <div id="emptyState" class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <div class="empty-state-title">You're all caught up!</div>
+            <div style="font-size: 0.9rem;">No alerts to display</div>
+        </div>
+        {% endif %}
+    {% else %}
+        
+        {% set current_date = None %}
+        {% for alert in alerts %}
+            
+            {% set dt_split = alert.created_at.split(' ') %}
+            {% set alert_date = dt_split[0] %}
+            
+            {# Using simple date grouping logic without full datetime module locally #}
+            {% if alert_date != current_date %}
+                <div class="date-group-header">{{ alert_date }}</div>
+                {% set current_date = alert_date %}
+            {% endif %}
+            
+            <div class="alert-item {% if alert.is_read == 0 %}alert-unread{% endif %}">
+                <div class="alert-icon">
+                    {% if alert.alert_type == 'HIGH_PRIORITY' %}🔴
+                    {% elif alert.alert_type == 'CORRELATION' %}🔗
+                    {% elif alert.alert_type == 'SIMILARITY' %}🔍
+                    {% elif alert.alert_type == 'SLA_BREACH' %}⏰
+                    {% elif alert.alert_type == 'ASSIGNMENT' %}👤
+                    {% elif alert.alert_type == 'ESCALATION' %}⬆️
+                    {% else %}⚙️{% endif %}
+                </div>
+                
+                <div class="alert-body">
+                    <div class="alert-header-row">
+                        <div class="alert-type-label" style="
+                            {% if alert.alert_type == 'HIGH_PRIORITY' %}color: #dc2626;
+                            {% elif alert.alert_type == 'CORRELATION' %}color: #7c3aed;
+                            {% elif alert.alert_type == 'SIMILARITY' %}color: #2563eb;
+                            {% elif alert.alert_type == 'SLA_BREACH' %}color: #ea580c;
+                            {% elif alert.alert_type == 'ASSIGNMENT' %}color: #0891b2;
+                            {% elif alert.alert_type == 'ESCALATION' %}color: #991b1b;
+                            {% else %}color: #64748b;{% endif %}
+                        ">
+                            <span class="severity-dot {% if alert.severity == 'CRITICAL' %}dot-critical{% elif alert.severity == 'WARNING' %}dot-warning{% else %}dot-info{% endif %}"></span>
+                            {{ alert.alert_type.replace('_', ' ') }}
+                        </div>
+                        <div class="alert-time" data-created="{{ alert.created_at }}">{{ alert.created_at }}</div>
+                    </div>
+                    
+                    <div class="alert-message {% if alert.is_read == 0 %}alert-message-unread{% endif %}">
+                        {{ alert.message }}
+                    </div>
+                    
+                    <div class="alert-links">
+                        {% if alert.incident_id %}
+                            <a href="/incidents/{{ alert.incident_id }}" class="alert-link">→ View Incident</a>
+                        {% endif %}
+                        {% if alert.cluster_id %}
+                            <a href="/correlation/{{ alert.cluster_id }}" class="alert-link">→ View Cluster</a>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="alert-actions">
+                        {% if alert.is_read == 0 %}
+                            <button class="alert-action-btn mark-read-btn" data-alert-id="{{ alert.id }}">Mark Read</button>
+                        {% endif %}
+                        <button class="alert-action-btn dismiss-btn" data-alert-id="{{ alert.id }}">Dismiss</button>
+                    </div>
+                </div>
+            </div>
+            
+        {% endfor %}
+        
+    {% endif %}
+</div>
+
+<!-- PAGINATION (Optional logic fallback if huge lengths) -->
+{% if alerts|length >= per_page %}
+<div class="pagination" style="margin-top: 20px; text-align: center;">
+    <a href="/alerts?page={{ page + 1 }}" class="btn btn-outline">Load Older Alerts</a>
+</div>
+{% endif %}
+
+<!-- ALERT TYPE LEGEND -->
+<div class="alert-type-legend">
+    <button id="legendToggle" class="legend-toggle">
+        What do these alerts mean? <span class="toggle-icon">▼</span>
+    </button>
+    <div id="legendContent" class="legend-content">
+        <div class="legend-item"><span>🔴</span> <span><strong>High Priority</strong> — Critical or high priority incident logged</span></div>
+        <div class="legend-item"><span>🔗</span> <span><strong>Correlation</strong> — Related incidents automatically grouped into cluster</span></div>
+        <div class="legend-item"><span>🔍</span> <span><strong>Similarity</strong> — Similar past incident found with suggested solution</span></div>
+        <div class="legend-item"><span>⏰</span> <span><strong>SLA Breach</strong> — Incident has exceeded response time limit</span></div>
+        <div class="legend-item"><span>👤</span> <span><strong>Assignment</strong> — An incident has been assigned to you</span></div>
+        <div class="legend-item"><span>⬆️</span> <span><strong>Escalation</strong> — Incident escalated due to severity</span></div>
+        <div class="legend-item"><span>⚙️</span> <span><strong>System</strong> — System notification</span></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% endblock %}

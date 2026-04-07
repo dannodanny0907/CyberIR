@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- TOP PROFILE HEADER CARD -->
+<div class="profile-header-card">
+    <div class="avatar-section">
+        <div class="large-avatar" id="profileAvatar" style="background: {{ current_user.avatar_color if current_user.avatar_color else '#2563eb' }};">
+            {{ current_user.full_name[0].upper() }}
+            {%- if current_user.full_name.split()|length > 1 -%}
+                {{ current_user.full_name.split()[-1][0].upper() }}
+            {%- endif %}
+        </div>
+        
+        <div class="color-swatches-row">
+            <div class="color-swatch {% if current_user.avatar_color == '#2563eb' or not current_user.avatar_color %}active{% endif %}" data-color="#2563eb" style="background: #2563eb;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#7c3aed' %}active{% endif %}" data-color="#7c3aed" style="background: #7c3aed;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#dc2626' %}active{% endif %}" data-color="#dc2626" style="background: #dc2626;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#16a34a' %}active{% endif %}" data-color="#16a34a" style="background: #16a34a;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#d97706' %}active{% endif %}" data-color="#d97706" style="background: #d97706;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#0891b2' %}active{% endif %}" data-color="#0891b2" style="background: #0891b2;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#db2777' %}active{% endif %}" data-color="#db2777" style="background: #db2777;"></div>
+            <div class="color-swatch {% if current_user.avatar_color == '#475569' %}active{% endif %}" data-color="#475569" style="background: #475569;"></div>
+        </div>
+    </div>
+    
+    <div class="profile-info-section">
+        <div class="profile-name" id="profileName">{{ user.full_name }}</div>
+        <div class="profile-email">{{ user.email }}</div>
+        
+        <div class="profile-badges">
+            <span class="role-badge role-{{ user.role|lower }}">{{ user.role }}</span>
+            {% if user.has_admin_privileges and user.role != 'Admin' %}
+            <span class="role-badge" style="background: #ffedd5; color: #c2410c; border: 1px solid #fdba74;">Admin Privileges</span>
+            {% endif %}
+        </div>
+        
+        <div class="profile-meta">
+            <div>Member since {{ user.created_at.split(' ')[0] if user.created_at else '' }}</div>
+            <div>Last login: <span data-created="{{ last_login }}">{{ last_login }}</span></div>
+        </div>
+    </div>
+    
+    <div class="profile-stats-row">
+        <div class="profile-stat">
+            <span class="profile-stat-number">{{ stats.incidents_created }}</span>
+            <span class="profile-stat-label">Incidents Created</span>
+        </div>
+        <div class="profile-stat">
+            <span class="profile-stat-number">{{ stats.incidents_assigned }}</span>
+            <span class="profile-stat-label">Incidents Assigned</span>
+        </div>
+        <div class="profile-stat">
+            <span class="profile-stat-number">{{ stats.incidents_resolved }}</span>
+            <span class="profile-stat-label">Incidents Resolved</span>
+        </div>
+        <div class="profile-stat">
+            <span class="profile-stat-number">{{ stats.alerts_unread }}</span>
+            <span class="profile-stat-label">Unread Alerts</span>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN CONTENT: TWO COLUMNS -->
+<div class="main-profile-grid">
+    <div class="profile-left-col">
+        <!-- Card 1: Edit Profile -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">✏️ Edit Profile</h3>
+            
+            <div class="form-field">
+                <label class="setting-label">Full Name</label>
+                <input type="text" id="fullNameInput" class="form-control" value="{{ user.full_name }}" style="width: 100%;">
+            </div>
+            
+            <div class="form-field">
+                <label class="setting-label">Email Address</label>
+                <input type="email" id="emailInput" class="form-control disabled-input" value="{{ user.email }}" disabled style="width: 100%;">
+                <div class="setting-subtext" style="margin-top:4px;">Email cannot be changed. Contact Admin if needed.</div>
+            </div>
+            
+            <div class="form-field">
+                <label class="setting-label">Phone Number (Optional)</label>
+                <input type="text" id="phoneInput" class="form-control" value="{{ user.phone_number or '' }}" placeholder="+1 234 567 8900" style="width: 100%;">
+            </div>
+            
+            <div class="form-field">
+                <label class="setting-label">Role</label>
+                <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;">
+                    <span class="role-badge role-{{ user.role|lower }}">{{ user.role }}</span>
+                </div>
+                <div class="setting-subtext" style="margin-top:4px;">Role is assigned by Administrator</div>
+            </div>
+            
+            <button id="saveProfileBtn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">💾 Save Profile</button>
+        </div>
+        
+        <!-- Card 2: Change Password -->
+        <div class="card">
+            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">🔒 Change Password</h3>
+            
+            <div class="form-field">
+                <label class="setting-label">Current Password</label>
+                <div class="password-field-container">
+                    <input type="password" id="currentPassword" class="form-control" placeholder="Enter current password" style="width: 100%;">
+                    <button type="button" class="toggle-password" data-target="currentPassword">👁️</button>
+                </div>
+            </div>
+            
+            <div class="form-field">
+                <label class="setting-label">New Password</label>
+                <div class="password-field-container">
+                    <input type="password" id="newPassword" class="form-control" placeholder="Minimum 8 characters" style="width: 100%;">
+                    <button type="button" class="toggle-password" data-target="newPassword">👁️</button>
+                </div>
+                <div class="password-strength-bar-container">
+                    <div id="strengthBar" class="password-strength-fill" style="width:0%;"></div>
+                </div>
+                <div id="strengthText" class="strength-text"></div>
+            </div>
+            
+            <div class="form-field">
+                <label class="setting-label">Confirm New Password</label>
+                <div class="password-field-container">
+                    <input type="password" id="confirmPassword" class="form-control" placeholder="Re-enter new password" style="width: 100%;">
+                    <button type="button" class="toggle-password" data-target="confirmPassword">👁️</button>
+                </div>
+                <div id="matchIndicator" class="match-indicator"></div>
+            </div>
+            
+            <button id="changePasswordBtn" class="btn" style="width: 100%; background: #7c3aed; color: white; border: none; margin-top: 8px;">🔒 Change Password</button>
+        </div>
+    </div>
+    
+    <div class="profile-right-col">
+        <!-- Card 1: Notification Preferences -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">🔔 Notification Preferences</h3>
+            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px;">Choose which alerts you receive</div>
+            
+            <div class="toggle-switch-container">
+                <div class="toggle-info">
+                    <div class="toggle-label">Email Notifications</div>
+                    <div class="toggle-subtext">Receive alerts via email</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_email_notifications" {% if prefs.email_notifications %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="toggle-switch-container {% if not prefs.email_notifications %}toggle-disabled{% endif %}">
+                <div class="toggle-info">
+                    <div class="toggle-label">Critical Alert Emails</div>
+                    <div class="toggle-subtext">Email for critical priority incidents</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_email_critical_alerts" {% if prefs.email_critical_alerts %}checked{% endif %} {% if not prefs.email_notifications %}disabled{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="toggle-switch-container {% if not prefs.email_notifications %}toggle-disabled{% endif %}">
+                <div class="toggle-info">
+                    <div class="toggle-label">Assignment Emails</div>
+                    <div class="toggle-subtext">Email when incident assigned to you</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_email_assignments" {% if prefs.email_assignments %}checked{% endif %} {% if not prefs.email_notifications %}disabled{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="toggle-switch-container {% if not prefs.email_notifications %}toggle-disabled{% endif %}">
+                <div class="toggle-info">
+                    <div class="toggle-label">Correlation Alert Emails</div>
+                    <div class="toggle-subtext">Email when new clusters detected</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_email_correlation_alerts" {% if prefs.email_correlation_alerts %}checked{% endif %} {% if not prefs.email_notifications %}disabled{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="toggle-switch-container {% if not prefs.email_notifications %}toggle-disabled{% endif %}">
+                <div class="toggle-info">
+                    <div class="toggle-label">Daily Summary</div>
+                    <div class="toggle-subtext">Daily digest of incident activity</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_email_daily_summary" {% if prefs.email_daily_summary %}checked{% endif %} {% if not prefs.email_notifications %}disabled{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div style="height: 1px; background: var(--border-color); margin: 8px 0;"></div>
+            
+            <div class="toggle-switch-container" style="border-bottom:none;">
+                <div class="toggle-info">
+                    <div class="toggle-label">Alert Sound</div>
+                    <div class="toggle-subtext">Play sound for new alerts</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_in_app_alert_sound" {% if prefs.in_app_alert_sound %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <button id="savePrefsBtn" class="btn btn-primary" style="width: 100%; margin-top: 16px;">💾 Save Preferences</button>
+        </div>
+        
+        <!-- Card 2: Display Preferences -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">🎨 Display Preferences</h3>
+            
+            <div class="toggle-switch-container">
+                <div class="toggle-info">
+                    <div class="toggle-label">Dark Mode</div>
+                    <div class="toggle-subtext">Switch to dark color scheme</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pref_dark_mode" {% if prefs.dark_mode %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            
+            <div class="form-field" style="margin-top: 16px; margin-bottom:0;">
+                <label class="setting-label">Items Per Page</label>
+                <div class="setting-subtext">Default number of items in tables</div>
+                <select id="pref_items_per_page" class="form-control" style="width: 100%;">
+                    <option value="10" {% if prefs.items_per_page == 10 %}selected{% endif %}>10 Items</option>
+                    <option value="25" {% if prefs.items_per_page == 25 %}selected{% endif %}>25 Items</option>
+                    <option value="50" {% if prefs.items_per_page == 50 %}selected{% endif %}>50 Items</option>
+                    <option value="100" {% if prefs.items_per_page == 100 %}selected{% endif %}>100 Items</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Card 3: Recent Activity -->
+        <div class="card">
+            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">📋 Recent Activity</h3>
+            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px;">Your last 10 actions in the system</div>
+            
+            <div class="activity-list">
+                {% if not activity %}
+                <div style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 20px 0;">No recent activity</div>
+                {% else %}
+                    {% for a in activity %}
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            {% if a.action_type == 'LOGIN' %}🔑
+                            {% elif a.action_type == 'LOGOUT' %}🚪
+                            {% elif a.action_type == 'CREATE_INCIDENT' %}📝
+                            {% elif a.action_type == 'UPDATE_INCIDENT' %}✏️
+                            {% elif a.action_type == 'RESOLVE_INCIDENT' %}✅
+                            {% elif a.action_type == 'ASSIGN_INCIDENT' %}👤
+                            {% elif a.action_type == 'CREATE_USER' %}👥
+                            {% elif a.action_type == 'UPDATE_USER' %}🔧
+                            {% elif a.action_type == 'DELETE_USER' %}🗑️
+                            {% elif a.action_type == 'UPDATE_SETTINGS' %}⚙️
+                            {% else %}📌{% endif %}
+                        </div>
+                        <div class="activity-text">
+                            {% if a.action_type == 'LOGIN' %}Logged in
+                            {% elif a.action_type == 'LOGOUT' %}Logged out
+                            {% elif a.action_type == 'CREATE_INCIDENT' %}Logged new incident
+                            {% elif a.action_type == 'UPDATE_INCIDENT' %}Updated incident details
+                            {% elif a.action_type == 'RESOLVE_INCIDENT' %}Resolved incident
+                            {% elif a.action_type == 'ASSIGN_INCIDENT' %}Assigned incident
+                            {% elif a.action_type == 'CREATE_USER' %}Created new user
+                            {% elif a.action_type == 'UPDATE_USER' %}Updated user info
+                            {% elif a.action_type == 'DELETE_USER' %}Deleted user
+                            {% elif a.action_type == 'UPDATE_SETTINGS' %}Updated settings
+                            {% else %}{{ a.action_type }}{% endif %}
+                        </div>
+                        <div class="activity-time" data-created="{{ a.created_at }}">{{ a.created_at }}</div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

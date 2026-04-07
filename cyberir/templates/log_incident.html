@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Incident{% endblock %}
+{% block page_title %}Log New Incident{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/log_incident.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="log-incident-container">
+    <form id="logIncidentForm" action="/incidents/log" method="POST">
+        <!-- Section 1 -->
+        <div class="card">
+            <div class="section-header">
+                📋 Incident Details
+            </div>
+            <div class="form-grid">
+                <div class="full-width">
+                    <label class="form-label" for="title">Incident Title <span class="text-danger">*</span></label>
+                    <input type="text" id="title" name="title" class="form-input" placeholder="Brief description of the incident" required>
+                    <div id="titleError" class="error-msg">Incident Title is required.</div>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="incident_type">Incident Type <span class="text-danger">*</span></label>
+                    <select id="incident_type" name="incident_type" class="form-input" required>
+                        <option value="">-- Select Type --</option>
+                        <option value="Phishing">Phishing</option>
+                        <option value="Malware">Malware</option>
+                        <option value="Data Breach">Data Breach</option>
+                        <option value="Ransomware">Ransomware</option>
+                        <option value="Unauthorized Access">Unauthorized Access</option>
+                        <option value="DDoS">DDoS</option>
+                        <option value="Insider Threat">Insider Threat</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <div id="incident_typeError" class="error-msg">Incident Type is required.</div>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="reported_date">Date Reported <span class="text-danger">*</span></label>
+                    <input type="datetime-local" id="reported_date" name="reported_date" class="form-input" required>
+                </div>
+                
+                <div class="full-width">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea id="description" name="description" class="form-input" rows="4" placeholder="Detailed description of what happened..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="card">
+            <div class="section-header">
+                🖥️ Affected Resources
+            </div>
+            <div class="form-grid">
+                <div>
+                    <label class="form-label" for="affected_asset">Affected Asset <span class="text-danger">*</span></label>
+                    <input type="text" id="affected_asset" name="affected_asset" class="form-input" placeholder="e.g. Web Server, Database, Workstation-PC01" required>
+                    <div id="affected_assetError" class="error-msg">Affected Asset is required.</div>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="affected_department">Affected Department</label>
+                    <select id="affected_department" name="affected_department" class="form-input">
+                        <option value="">-- Select Department --</option>
+                        <option value="IT">IT</option>
+                        <option value="Finance">Finance</option>
+                        <option value="HR">HR</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Legal">Legal</option>
+                        <option value="Executive">Executive</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="users_affected">Number of Users Affected</label>
+                    <input type="number" id="users_affected" name="users_affected" class="form-input" min="0" value="0">
+                </div>
+                
+                <div>
+                    <label class="form-label" for="ip_address">IP Address</label>
+                    <input type="text" id="ip_address" name="ip_address" class="form-input" placeholder="e.g. 192.168.1.50">
+                </div>
+                
+                <div class="full-width">
+                    <label class="form-label" for="attack_indicators">Attack Indicators</label>
+                    <textarea id="attack_indicators" name="attack_indicators" class="form-input" rows="2" placeholder="e.g. malicious IPs, URLs, file hashes, email addresses (comma-separated)"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="card">
+            <div class="section-header">
+                ⚠️ Risk Assessment
+            </div>
+            <div class="form-grid">
+                <div>
+                    <label class="form-label" for="asset_criticality">Asset Criticality <span class="text-danger">*</span></label>
+                    <select id="asset_criticality" name="asset_criticality" class="risk-select" required>
+                        <option value="">-- Select --</option>
+                        <option value="1">1 - Very Low</option>
+                        <option value="2">2 - Low</option>
+                        <option value="3">3 - Medium</option>
+                        <option value="4">4 - High</option>
+                        <option value="5">5 - Critical</option>
+                    </select>
+                    <div id="asset_criticalityError" class="error-msg">Selection required.</div>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="threat_severity">Threat Severity <span class="text-danger">*</span></label>
+                    <select id="threat_severity" name="threat_severity" class="risk-select" required>
+                        <option value="">-- Select --</option>
+                        <option value="1">1 - Very Low</option>
+                        <option value="2">2 - Low</option>
+                        <option value="3">3 - Medium</option>
+                        <option value="4">4 - High</option>
+                        <option value="5">5 - Critical</option>
+                    </select>
+                    <div id="threat_severityError" class="error-msg">Selection required.</div>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="vulnerability_exposure">Vulnerability Exposure <span class="text-danger">*</span></label>
+                    <select id="vulnerability_exposure" name="vulnerability_exposure" class="risk-select" required>
+                        <option value="">-- Select --</option>
+                        <option value="1">1 - Very Low</option>
+                        <option value="2">2 - Low</option>
+                        <option value="3">3 - Medium</option>
+                        <option value="4">4 - High</option>
+                        <option value="5">5 - Critical</option>
+                    </select>
+                    <div id="vulnerability_exposureError" class="error-msg">Selection required.</div>
+                </div>
+                
+                <div style="display:flex; align-items:flex-end; padding-bottom:10px;">
+                    <div class="flex align-center gap-2">
+                        <input type="checkbox" id="is_repeat" name="is_repeat" value="1">
+                        <label for="is_repeat" style="margin:0; font-weight:500;">This incident has occurred before</label>
+                    </div>
+                </div>
+                
+                <div class="full-width">
+                    <div class="form-label">Estimated Risk Score</div>
+                    <div class="risk-preview-box" id="riskPreviewBox">
+                        <div class="risk-score-display" id="riskScoreDisplay">---</div>
+                        <div class="priority-badge-preview" id="priorityBadgePreview">Pending Data</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="card">
+            <div class="section-header">
+                👤 Assignment
+            </div>
+            <div class="form-grid">
+                <div>
+                    <label class="form-label" for="assigned_to">Assign To</label>
+                    <select id="assigned_to" name="assigned_to" class="form-input">
+                        <option value="">-- Unassigned --</option>
+                        {% for analyst in analysts %}
+                            <option value="{{ analyst.id }}">{{ analyst.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="full-width">
+                    <label class="form-label" for="initial_notes">Initial Notes</label>
+                    <textarea id="initial_notes" name="initial_notes" class="form-input" rows="3" placeholder="Any initial observations or actions taken..."></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions-bar">
+            <a href="/incidents" class="btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center;">Cancel</a>
+            <button type="submit" class="btn-primary btn-submit" id="submitBtn">🛡️ Log Incident</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/log_incident.js') }}"></script>
+{% endblock %}

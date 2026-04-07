@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+{% block page_title %}System Settings{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="settings-header">
+    <div>
+        <h2 style="margin:0; font-size: 1.3rem; font-weight: 800;">⚙️ System Settings</h2>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 4px;">Configure system behavior, algorithms, and SLA thresholds</div>
+    </div>
+    <button class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="document.querySelector('.settings-tab[data-panel=\'tab-reset\']')?.click()">Reset to Defaults</button>
+</div>
+
+<!-- SETTINGS TABS -->
+<div class="settings-tabs-nav">
+    <button class="settings-tab active" data-panel="tab-algo">🤖 Algorithm Configuration</button>
+    <button class="settings-tab" data-panel="tab-sla">⏱ SLA Configuration</button>
+    <button class="settings-tab" data-panel="tab-risk">📊 Risk Scoring</button>
+    <button class="settings-tab" data-panel="tab-sys">⚙️ System Configuration</button>
+    <button class="settings-tab" data-panel="tab-test">🔬 Algorithm Testing</button>
+    <!-- Hidden reset tab hook -->
+    <button class="settings-tab" data-panel="tab-reset" style="display:none"></button>
+</div>
+
+<!-- TAB 1: Algorithm Configuration -->
+<div id="tab-algo" class="tab-panel active">
+    <div class="algorithm-section" style="background: white; margin-bottom: 24px;">
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">🤖 Algorithm Configuration</div>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Configure the correlation and similarity detection algorithms</div>
+        
+        <div class="two-column-settings-grid">
+            <!-- LEFT: Correlation -->
+            <div class="algorithm-section">
+                <div class="algorithm-section-title">
+                    🔗 Correlation Engine
+                    <span class="active-badge">Active</span>
+                </div>
+                
+                <div class="setting-field">
+                    <label class="setting-label">Correlation Threshold</label>
+                    <div class="setting-subtext">Minimum similarity score to group incidents into a cluster (0.1 = very loose, 1.0 = exact match only)</div>
+                    <div class="range-slider-container">
+                        <input type="range" class="range-slider" id="correlation_threshold" min="0.1" max="1.0" step="0.05" value="{{ settings.get('correlation_threshold', 0.65) }}">
+                        <div class="range-value-display" id="correlation_thresholdDisplay">{{ (settings.get('correlation_threshold', 0.65)|float * 100)|int }}%</div>
+                    </div>
+                    <div class="threshold-ind ind-recommended" id="correlation_thresholdInd">✓ Recommended</div>
+                </div>
+                
+                <div class="setting-field">
+                    <label class="setting-label">Correlation Time Window</label>
+                    <div class="setting-subtext">How many hours back to look for related incidents</div>
+                    <div class="number-input-with-unit">
+                        <input type="number" class="number-input" id="correlation_time_window" min="1" max="168" value="{{ settings.get('correlation_time_window_hours', 48) }}">
+                        <span class="unit-label">hours</span>
+                    </div>
+                    <div class="helper-text" id="corrTimeHelper">Current: looks back {{ settings.get('correlation_time_window_hours', 48) }} hours ({{ (settings.get('correlation_time_window_hours', 48)|float / 24)|round(1) }} days)</div>
+                </div>
+            </div>
+            
+            <!-- RIGHT: Similarity -->
+            <div class="algorithm-section">
+                <div class="algorithm-section-title">
+                    🔍 Similarity Engine
+                    <span class="active-badge">Active</span>
+                </div>
+                
+                <div class="setting-field">
+                    <label class="setting-label">Similarity Threshold</label>
+                    <div class="setting-subtext">Minimum score to suggest a past incident as similar (0.5 = moderate match)</div>
+                    <div class="range-slider-container">
+                        <input type="range" class="range-slider" id="similarity_threshold" min="0.1" max="1.0" step="0.05" value="{{ settings.get('similarity_threshold', 0.5) }}">
+                        <div class="range-value-display" id="similarity_thresholdDisplay">{{ (settings.get('similarity_threshold', 0.5)|float * 100)|int }}%</div>
+                    </div>
+                    <div class="threshold-ind ind-loose" id="similarity_thresholdInd">Loose</div>
+                </div>
+                
+                <div class="setting-field">
+                    <label class="setting-label">Maximum Similar Incidents Shown</label>
+                    <div class="setting-subtext">How many similar past incidents to display per incident (1-10)</div>
+                    <div class="number-input-with-unit">
+                        <input type="number" class="number-input" id="similarity_result_limit" min="1" max="10" value="{{ settings.get('similarity_result_limit', 5) }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button id="saveAlgorithmBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Save Algorithm Settings</button>
+    </div>
+</div>
+
+<!-- TAB 2: SLA Configuration -->
+<div id="tab-sla" class="tab-panel">
+    <div class="algorithm-section" style="background: white;">
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">⏱ SLA Configuration</div>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Set response time limits for each priority level. Breaches trigger automatic alerts.</div>
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; color: #1e3a8a;">
+            ⚡ SLA alerts are generated automatically when you visit the Alerts page. Incidents exceeding these limits will appear as SLA Breach alerts.
+        </div>
+        
+        <div class="sla-rows">
+            <span class="badge priority-critical" style="width: 75px; text-align: center;">Critical</span>
+            <input type="number" id="critical_sla" class="number-input" min="1" max="24" value="{{ settings.get('critical_sla_hours', 4) }}">
+            <span class="unit-label">hours</span>
+            <span class="helper-text">Alert triggers after <span id="critSlaVal">{{ settings.get('critical_sla_hours', 4) }}</span> hour(s)</span>
+        </div>
+        
+        <div class="sla-rows">
+            <span class="badge priority-high" style="width: 75px; text-align: center;">High</span>
+            <input type="number" id="high_sla" class="number-input" min="1" max="168" value="{{ settings.get('high_sla_hours', 24) }}">
+            <span class="unit-label">hours</span>
+            <span class="helper-text">Alert triggers after <span id="highSlaVal">{{ settings.get('high_sla_hours', 24) }}</span> hour(s)</span>
+        </div>
+        
+        <div class="sla-rows">
+            <span class="badge priority-medium" style="width: 75px; text-align: center;">Medium</span>
+            <input type="number" id="medium_sla" class="number-input" min="1" max="720" value="{{ settings.get('medium_sla_hours', 72) }}">
+            <span class="unit-label">hours</span>
+            <span class="helper-text">Alert triggers after <span id="medSlaVal">{{ settings.get('medium_sla_hours', 72) }}</span> hour(s)</span>
+        </div>
+        
+        <div class="sla-rows">
+            <span class="badge priority-low" style="width: 75px; text-align: center;">Low</span>
+            <input type="number" id="low_sla" class="number-input" min="1" max="2160" value="{{ settings.get('low_sla_hours', 168) }}">
+            <span class="unit-label">hours</span>
+            <span class="helper-text">Alert triggers after <span id="lowSlaVal">{{ settings.get('low_sla_hours', 168) }}</span> hour(s)</span>
+        </div>
+        
+        <div id="slaIndicator" class="validation-ind valid">✅ SLA hierarchy is valid</div>
+        
+        <button id="saveSlaBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Save SLA Settings</button>
+    </div>
+</div>
+
+<!-- TAB 3: Risk Scoring -->
+<div id="tab-risk" class="tab-panel">
+    <div class="algorithm-section" style="background: white;">
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">📊 Risk Scoring Weights</div>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Adjust how each factor contributes to the overall risk score calculation</div>
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; color: #1e3a8a;">
+            The risk score formula uses these weights to calculate a score from 0-100 for each incident. All weights must add up to exactly 100%.
+        </div>
+        
+        <!-- Factor 1 -->
+        <div class="weight-fields">
+            <div class="setting-label" style="margin-bottom:0;">Asset Criticality</div>
+            <div class="setting-subtext">How critical is the affected asset</div>
+            <div class="weight-input-row">
+                <input type="number" id="weight_asset_criticality" class="weight-input number-input" min="0" max="100" value="{{ (settings.get('weight_asset_criticality', 0.3)|float * 100)|int }}">
+                <span class="percent-sign">%</span>
+                <div class="weight-bar-track"><div id="weight_asset_criticalityBar" class="weight-bar-fill"></div></div>
+            </div>
+        </div>
+        
+        <!-- Factor 2 -->
+        <div class="weight-fields">
+            <div class="setting-label" style="margin-bottom:0;">Threat Severity</div>
+            <div class="setting-subtext">How severe is the threat itself</div>
+            <div class="weight-input-row">
+                <input type="number" id="weight_threat_severity" class="weight-input number-input" min="0" max="100" value="{{ (settings.get('weight_threat_severity', 0.3)|float * 100)|int }}">
+                <span class="percent-sign">%</span>
+                <div class="weight-bar-track"><div id="weight_threat_severityBar" class="weight-bar-fill"></div></div>
+            </div>
+        </div>
+        
+        <!-- Factor 3 -->
+        <div class="weight-fields">
+            <div class="setting-label" style="margin-bottom:0;">Vulnerability Exposure</div>
+            <div class="setting-subtext">How exposed is the vulnerability</div>
+            <div class="weight-input-row">
+                <input type="number" id="weight_vulnerability_exposure" class="weight-input number-input" min="0" max="100" value="{{ (settings.get('weight_vulnerability_exposure', 0.15)|float * 100)|int }}">
+                <span class="percent-sign">%</span>
+                <div class="weight-bar-track"><div id="weight_vulnerability_exposureBar" class="weight-bar-fill"></div></div>
+            </div>
+        </div>
+        
+        <!-- Factor 4 -->
+        <div class="weight-fields">
+            <div class="setting-label" style="margin-bottom:0;">Users Affected</div>
+            <div class="setting-subtext">How many users are impacted</div>
+            <div class="weight-input-row">
+                <input type="number" id="weight_users_affected" class="weight-input number-input" min="0" max="100" value="{{ (settings.get('weight_users_affected', 0.2)|float * 100)|int }}">
+                <span class="percent-sign">%</span>
+                <div class="weight-bar-track"><div id="weight_users_affectedBar" class="weight-bar-fill"></div></div>
+            </div>
+        </div>
+        
+        <!-- Factor 5 -->
+        <div class="weight-fields">
+            <div class="setting-label" style="margin-bottom:0;">Repeat Incident</div>
+            <div class="setting-subtext">Penalty for recurring incidents</div>
+            <div class="weight-input-row">
+                <input type="number" id="weight_repeat_penalty" class="weight-input number-input" min="0" max="100" value="{{ (settings.get('weight_repeat_penalty', 0.05)|float * 100)|int }}">
+                <span class="percent-sign">%</span>
+                <div class="weight-bar-track"><div id="weight_repeat_penaltyBar" class="weight-bar-fill"></div></div>
+            </div>
+        </div>
+        
+        <div class="total-display total-valid" id="weightTotal">100%</div>
+        <div id="weightIndicator" class="validation-ind valid" style="text-align: center; margin-top: 10px;">✅ Total: 100% — Valid</div>
+        
+        <div class="formula-preview">
+            Risk Score = (Asset×<span id="f1">30</span>% + Severity×<span id="f2">30</span>% + Exposure×<span id="f3">15</span>% + Users×<span id="f4">20</span>% + Repeat×<span id="f5">5</span>%) / 5 × 100
+        </div>
+        
+        <button id="saveWeightsBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Save Risk Weights</button>
+    </div>
+</div>
+
+<!-- TAB 4: System Configuration -->
+<div id="tab-sys" class="tab-panel">
+    <div class="algorithm-section" style="background: white;">
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 20px;">⚙️ System Configuration</div>
+        
+        <div class="two-column-settings-grid">
+            <div>
+                <div class="setting-field">
+                    <label class="setting-label">Organization Name</label>
+                    <div class="setting-subtext">Displayed in reports and page headers</div>
+                    <input type="text" id="organization_name" class="form-control" style="width: 100%;" maxlength="100" value="{{ settings.get('organization_name', 'CyberIR') }}">
+                </div>
+                
+                <div class="setting-field">
+                    <label class="setting-label">Incident ID Prefix</label>
+                    <div class="setting-subtext">Prefix for generated incident IDs (e.g. INC-, SEC-, IR-)</div>
+                    <input type="text" id="incident_id_prefix" class="form-control" style="width: 100%;" maxlength="10" value="{{ settings.get('incident_id_prefix', 'INC-') }}">
+                    <div class="helper-text" id="prefixPreview" style="margin-top:8px;">Next ID will look like: {{ settings.get('incident_id_prefix', 'INC-') }}001</div>
+                    <div style="font-size: 0.75rem; color: #b45309; background: #fef3c7; padding: 6px; border-radius: 4px; border: 1px solid #fcd34d; margin-top: 8px;">
+                        ⚠️ Changing this only affects NEW incidents. Existing IDs are not changed.
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <div class="setting-field">
+                    <label class="setting-label">Session Timeout</label>
+                    <div class="setting-subtext">Minutes of inactivity before automatic logout</div>
+                    <div class="number-input-with-unit">
+                        <input type="number" id="session_timeout" class="number-input" min="5" max="480" value="{{ settings.get('session_timeout', '60') }}">
+                        <span class="unit-label">minutes</span>
+                    </div>
+                </div>
+                
+                <div class="setting-field">
+                    <label class="setting-label">Date Display Format</label>
+                    <div class="setting-subtext">Format used globally for local timestamps</div>
+                    <select id="date_format" class="form-control" style="width: 100%;">
+                        <option value="DD/MM/YYYY" {% if settings.get('date_format') == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY (e.g. 05/04/2026)</option>
+                        <option value="MM/DD/YYYY" {% if settings.get('date_format') == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY (e.g. 04/05/2026)</option>
+                        <option value="YYYY-MM-DD" {% if settings.get('date_format') == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD (e.g. 2026-04-05)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="system-info-card">
+            <div style="font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">System Statistics</div>
+            <div class="system-info-row"><span>Database:</span> <span class="system-info-value">cyberir.db</span></div>
+            <div class="system-info-row"><span>Total Incidents:</span> <span class="system-info-value">{{ system_info.total_incidents }}</span></div>
+            <div class="system-info-row"><span>Total Users:</span> <span class="system-info-value">{{ system_info.total_users }}</span></div>
+            <div class="system-info-row"><span>Total Clusters:</span> <span class="system-info-value">{{ system_info.total_clusters }}</span></div>
+            <div class="system-info-row"><span>Total Alerts:</span> <span class="system-info-value">{{ system_info.total_alerts }}</span></div>
+            <div class="system-info-row" style="border:none;"><span>Total Activity Logs:</span> <span class="system-info-value">{{ system_info.total_activity_logs }}</span></div>
+        </div>
+        
+        <div class="data-management-section">
+            <h4 style="margin: 0 0 10px 0;">🗄️ Data Management</h4>
+            <div style="background: #fff7ed; padding: 12px; border: 1px solid #fed7aa; border-radius: 6px; color: #c2410c; font-size: 0.85rem; margin-bottom: 14px;">
+                ⚠️ These actions affect real data. Use with caution.
+            </div>
+            <div class="export-buttons">
+                <a href="/reports/export/incidents" class="btn btn-outline" style="font-size: 0.85rem;">📥 Export All Incidents (CSV)</a>
+                <a href="/reports/export/clusters" class="btn btn-outline" style="font-size: 0.85rem;">📥 Export All Clusters (CSV)</a>
+                <a href="/reports/export/activity" class="btn btn-outline" style="font-size: 0.85rem;">📥 Export Activity Log (CSV)</a>
+            </div>
+        </div>
+        
+        <button id="saveSystemBtn" class="btn btn-primary" style="width: 100%; margin-top: 24px;">💾 Save System Settings</button>
+    </div>
+</div>
+
+<!-- TAB 5: Algorithm Testing & Reset -->
+<div id="tab-test" class="tab-panel">
+    <div class="algorithm-section" style="background: white;">
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">🔬 Algorithm Testing</div>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Test both algorithms against real incidents in your database</div>
+        
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 24px; font-size: 0.85rem; color: #92400e;">
+            ⚠️ These tests run the actual algorithms on your data. Results are read-only — no data will be changed.
+        </div>
+        
+        <div class="two-column-settings-grid">
+            <div class="test-section">
+                <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px;">🔗 Test Correlation Engine</h4>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Select an incident to run the correlation algorithm against all incidents in the last {{ settings.get('correlation_time_window_hours', 48) }}h</div>
+                
+                <select id="testCorrelationIncident" class="form-control" style="width: 100%; margin-bottom: 12px;">
+                    <option value="">-- Select an incident --</option>
+                    {% for inc in recent_incidents %}
+                    <option value="{{ inc.incident_id }}">{{ inc.incident_id }} — {{ inc.title[:30] }}...</option>
+                    {% endfor %}
+                </select>
+                <button id="runCorrelationTest" class="btn btn-primary" style="width: 100%;">Run Correlation Test</button>
+                
+                <div id="correlationTestResults" class="test-results-box"></div>
+            </div>
+            
+            <div class="test-section">
+                <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px;">🔍 Test Similarity Engine</h4>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Select an incident to find matching logical patterns across historical databases inside the system.</div>
+                
+                <select id="testSimilarityIncident" class="form-control" style="width: 100%; margin-bottom: 12px;">
+                    <option value="">-- Select an incident --</option>
+                    {% for inc in recent_incidents %}
+                    <option value="{{ inc.incident_id }}">{{ inc.incident_id }} — {{ inc.title[:30] }}...</option>
+                    {% endfor %}
+                </select>
+                <button id="runSimilarityTest" class="btn btn-primary" style="width: 100%;">Run Similarity Test</button>
+                
+                <div id="similarityTestResults" class="test-results-box"></div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<div id="tab-reset" class="tab-panel">
+    <div class="reset-section">
+        <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px; color:#991b1b;">🔄 Reset All Settings</h4>
+        <div style="font-size: 0.85rem; color: #991b1b; margin-bottom: 16px;">
+            This will reset ALL settings to their original default values. This cannot be undone.
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="text" id="resetConfirmInput" class="reset-confirm-input" placeholder="Type RESET">
+            <button id="resetDefaultsBtn" class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5;" disabled>Reset to Defaults</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}

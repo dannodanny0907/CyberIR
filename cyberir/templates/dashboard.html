@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- SECTION 0: Hidden data elements for JavaScript -->
+<script id="statusData" type="application/json">
+  {{ incidents_by_status | tojson }}
+</script>
+<script id="priorityData" type="application/json">
+  {{ incidents_by_priority | tojson }}
+</script>
+<script id="typeData" type="application/json">
+  {{ incidents_by_type | tojson }}
+</script>
+<script id="trendData" type="application/json">
+  {{ daily_trend | tojson }}
+</script>
+<script id="resolutionData" type="application/json">
+  {{ resolution_by_type | tojson }}
+</script>
+
+<!-- SECTION 1: Correlation Alert Banner -->
+{% if active_clusters > 0 %}
+<div id="correlationBanner" class="alert-banner">
+    <div>
+        <div class="alert-banner-title">🔴 {{ active_clusters }} Active Correlation Cluster(s) Detected — Possible Coordinated Attack</div>
+        <div class="alert-banner-sub">Review correlated incidents immediately</div>
+    </div>
+    <a href="/correlation" class="alert-banner-btn">View Clusters →</a>
+</div>
+{% else %}
+<div id="correlationBanner" class="alert-banner" style="display: none;">
+    <div>
+        <div class="alert-banner-title">🔴 <span id="banner-cluster-count"></span> Active Correlation Cluster(s) Detected — Possible Coordinated Attack</div>
+        <div class="alert-banner-sub">Review correlated incidents immediately</div>
+    </div>
+    <a href="/correlation" class="alert-banner-btn">View Clusters →</a>
+</div>
+{% endif %}
+
+<!-- SECTION 2: Main Metrics Row (6 cards) -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon circle ic-blue">📋</div>
+        <div>
+            <div class="metric-count" id="stat-total">{{ total_incidents }}</div>
+            <div class="metric-label">Total Incidents</div>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-icon circle ic-red">🔴</div>
+        <div>
+            <div class="metric-count" id="stat-open">{{ open_incidents }}</div>
+            <div class="metric-label">Open</div>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-icon circle ic-orange">🔍</div>
+        <div>
+            <div class="metric-count" id="stat-investigating">{{ investigating_incidents }}</div>
+            <div class="metric-label">Investigating</div>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-icon circle ic-green">✅</div>
+        <div>
+            <div class="metric-count" id="stat-resolved">{{ resolved_incidents }}</div>
+            <div class="metric-label">Resolved</div>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-icon circle ic-darkred">⚠️</div>
+        <div>
+            <div class="metric-count" id="stat-critical">{{ critical_incidents }}</div>
+            <div class="metric-label">Critical</div>
+        </div>
+    </div>
+    
+    <div class="metric-card">
+        <div class="metric-icon circle ic-purple">🔗</div>
+        <div>
+            <div class="metric-count" id="stat-clusters">{{ active_clusters }}</div>
+            <div class="metric-label">Active Clusters</div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 3: Charts Row (3 charts) -->
+<div class="charts-row">
+    <div class="chart-card">
+        <div class="chart-header">Incidents by Status</div>
+        <canvas id="statusChart" style="max-height: 240px;"></canvas>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header">Incidents by Priority</div>
+        <canvas id="priorityChart" style="max-height: 240px;"></canvas>
+    </div>
+    <div class="chart-card">
+        <div class="chart-header">Incidents by Type</div>
+        <canvas id="typeChart" style="max-height: 240px;"></canvas>
+    </div>
+</div>
+
+<!-- SECTION 4: Trend Chart (Full Width) -->
+<div class="trend-card">
+    <div class="chart-header" style="display: flex; justify-content: space-between;">
+        <span>📈 Incident Trend — Last 14 Days</span>
+        <span style="font-size: 0.85rem; color: #64748b; font-weight: normal;">Today: {{ today_count }} incidents</span>
+    </div>
+    <div class="trend-canvas-container">
+        <canvas id="trendChart"></canvas>
+    </div>
+</div>
+
+<!-- SECTION 5: Resolution Time Chart (Full Width) -->
+<div class="resolution-card">
+    <div class="chart-header" style="margin-bottom:4px;">⏱ Average Resolution Time by Type</div>
+    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 16px;">Hours taken to resolve incidents by category (resolved incidents only)</div>
+    <div class="resolution-canvas-container" style="position: relative; height: 160px;">
+        <canvas id="resolutionChart"></canvas>
+        <div id="resolutionNoData" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.9rem; text-align: center;">
+            No resolved incidents yet — resolve some incidents to see resolution time data
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 6: Two Tables Row -->
+<div class="tables-row">
+    <!-- Table 1: Top 5 Highest Risk Incidents -->
+    <div class="chart-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+        <div style="padding: 16px 20px 12px 20px; border-bottom: 1px solid #f1f5f9;">
+            <div class="chart-header" style="margin-bottom: 4px; border-bottom: none; padding-bottom: 0;">⚠️ Top 5 Highest Risk Incidents</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Open and investigating by risk score</div>
+        </div>
+        
+        <div style="flex: 1; overflow-x: auto;">
+            {% if top_incidents %}
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Incident ID</th>
+                        <th>Title</th>
+                        <th>Priority</th>
+                        <th>Risk Score</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inc in top_incidents %}
+                    <tr data-href="/incidents/{{ inc.incident_id }}">
+                        <td><span style="font-family: monospace; color: #2563eb;">{{ inc.incident_id }}</span></td>
+                        <td>{{ inc.title[:32] }}{% if inc.title|length > 32 %}...{% endif %}</td>
+                        <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                        <td>
+                            <div style="font-weight: 700;">{{ inc.risk_score }}</div>
+                            <div class="mini-risk-bar">
+                                {% set color = '#16a34a' %}
+                                {% if inc.priority == 'Critical' %}{% set color = '#dc2626' %}
+                                {% elif inc.priority == 'High' %}{% set color = '#ea580c' %}
+                                {% elif inc.priority == 'Medium' %}{% set color = '#2563eb' %}{% endif %}
+                                <div class="mini-risk-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};"></div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if inc.assigned_name %}
+                                {{ inc.assigned_name }}
+                            {% else %}
+                                <span style="color: #94a3b8; font-style: italic;">Unassigned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state-small">✅ No open incidents — all clear!</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Table 2: Recent Clusters -->
+    <div class="chart-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+        <div style="padding: 16px 20px 12px 20px; border-bottom: 1px solid #f1f5f9;">
+            <div class="chart-header" style="margin-bottom: 4px; border-bottom: none; padding-bottom: 0;">🔗 Active Correlation Clusters</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Automatically detected clusters</div>
+        </div>
+        
+        <div style="flex: 1; overflow-x: auto;">
+            {% if recent_clusters %}
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Cluster ID</th>
+                        <th>Incidents</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cluster in recent_clusters %}
+                    <tr data-href="/correlation/{{ cluster.cluster_id }}">
+                        <td><span style="font-family: monospace; color: #7c3aed;">{{ cluster.cluster_id }}</span></td>
+                        <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ cluster.incident_count }}</span></td>
+                        <td><span class="badge priority-{{ cluster.severity|lower }}">{{ cluster.severity }}</span></td>
+                        <td><span class="badge {% if cluster.status == 'Active' %}status-open{% elif cluster.status == 'Investigating' %}status-investigating{% else %}status-resolved{% endif %}">{{ cluster.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state-small">No clusters detected yet</div>
+            {% endif %}
+        </div>
+        <a href="/correlation" class="card-footer-link">View all clusters →</a>
+    </div>
+</div>
+
+<!-- SECTION 7: Similarity Stats Row (3 cards) -->
+<div class="similarity-cards-row">
+    <div class="sim-stat-card" style="border-left-color: #2563eb;">
+        <div class="sim-stat-icon">🔍</div>
+        <div>
+            <div class="sim-stat-count" id="stat-similarity">{{ total_similarity_matches }}</div>
+            <div class="sim-stat-label">Incidents with matches</div>
+        </div>
+    </div>
+    
+    <div class="sim-stat-card" style="border-left-color: #16a34a;">
+        <div class="sim-stat-icon">✅</div>
+        <div>
+            <div class="sim-stat-count">{{ high_confidence_matches }}</div>
+            <div class="sim-stat-label">Score &gt;= 75%</div>
+        </div>
+    </div>
+    
+    <div class="sim-stat-card" style="border-left-color: #7c3aed;">
+        <div class="sim-stat-icon">💡</div>
+        <div>
+            <div class="sim-stat-count">{{ solutions_applied }}</div>
+            <div class="sim-stat-label">Solutions reused</div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 8: Recent Similarity Matches Table -->
+<div class="chart-card" style="padding: 0; margin-bottom: 20px;">
+    <div style="padding: 16px 20px 12px 20px; border-bottom: 1px solid #f1f5f9;">
+        <div class="chart-header" style="margin-bottom: 4px; border-bottom: none; padding-bottom: 0;">🔍 Recent Similarity Matches</div>
+        <div style="font-size: 0.8rem; color: #64748b;">Incidents with automatically detected historical matches</div>
+    </div>
+    
+    {% if recent_similarity_matches %}
+    <div style="overflow-x: auto;">
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th>Incident</th>
+                    <th>Type</th>
+                    <th>Matched To</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Solution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in recent_similarity_matches %}
+                <tr data-href="/incidents/{{ match.incident_id }}">
+                    <td>
+                        <div style="font-family: monospace; color: #2563eb; font-size: 0.8rem; margin-bottom: 2px;">{{ match.incident_id }}</div>
+                        <div>{{ match.title[:28] }}{% if match.title|length > 28 %}...{% endif %}</div>
+                    </td>
+                    <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ match.incident_type }}</span></td>
+                    <td><span style="font-family: monospace; color: #64748b;">{{ match.similar_incident_id }}</span></td>
+                    <td>
+                        {% set score_pct = (match.similarity_score * 100)|round|int %}
+                        {% if score_pct >= 75 %}
+                            <span style="color: #16a34a; font-weight: 700;">{{ score_pct }}%</span>
+                        {% else %}
+                            <span style="color: #2563eb; font-weight: 700;">{{ score_pct }}%</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge {% if match.status == 'Open' %}status-open{% elif match.status == 'Investigating' %}status-investigating{% elif match.status == 'Resolved' %}status-resolved{% else %}status-closed{% endif %}">{{ match.status }}</span></td>
+                    <td>
+                        {% if match.solution_applied_from %}
+                            <span style="color: #16a34a; font-weight: 600;">Applied ✓</span>
+                        {% else %}
+                            <span style="color: #94a3b8;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state-small">No similarity matches yet. Matches appear automatically when resolved incidents share patterns with new ones.</div>
+    {% endif %}
+    <a href="/similarity" class="card-footer-link" style="border-top: 1px solid #f1f5f9;">View all matches →</a>
+</div>
+
+<!-- SECTION 9: Recent Activity (Full Width) -->
+<div class="chart-card" style="padding: 0;">
+    <div style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9;">
+        <div class="chart-header" style="margin: 0; border: none; padding: 0;">📋 Recently Logged Incidents</div>
+    </div>
+    
+    {% if recent_incidents %}
+    <div style="overflow-x: auto;">
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th>Incident ID</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Risk Score</th>
+                    <th>Reported</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inc in recent_incidents %}
+                <tr data-href="/incidents/{{ inc.incident_id }}">
+                    <td><span style="font-family: monospace; color: #2563eb;">{{ inc.incident_id }}</span></td>
+                    <td>{{ inc.title[:35] }}{% if inc.title|length > 35 %}...{% endif %}</td>
+                    <td>{{ inc.incident_type }}</td>
+                    <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                    <td><span class="badge {% if inc.status == 'Open' %}status-open{% elif inc.status == 'Investigating' %}status-investigating{% elif inc.status == 'Resolved' %}status-resolved{% else %}status-closed{% endif %}">{{ inc.status }}</span></td>
+                    <td style="font-weight: 600;">{{ inc.risk_score }}</td>
+                    <td style="color: #64748b; font-size: 0.8rem;">{{ inc.reported_date.split('T')[0] if 'T' in inc.reported_date else inc.reported_date.split(' ')[0] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state-small">No incidents logged yet.</div>
+    {% endif %}
+    
+    <a href="/incidents" class="card-footer-link" style="border-top: 1px solid #f1f5f9;">View all incidents →</a>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
