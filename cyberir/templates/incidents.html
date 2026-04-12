@@ -102,10 +102,27 @@
 
 <div class="table-container">
     {% if incidents|length == 0 %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <div>No incidents found matching your criteria.</div>
-    </div>
+        {% if stats.total == 0 %}
+        <div class="empty-state fade-in">
+            <div class="empty-icon">🛡️</div>
+            <h3>No incidents logged yet</h3>
+            <p>Your system is clean! Log your first incident when a security event occurs.</p>
+            {% if current_user.role != 'Viewer' %}
+            <a href="/incidents/log" class="btn-primary" style="display:inline-block; text-decoration:none;margin-top:12px">
+                Log First Incident
+            </a>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state fade-in">
+            <div class="empty-icon">🔍</div>
+            <h3>No incidents match your filters</h3>
+            <p>Try adjusting or clearing your filters to see more results.</p>
+            <a href="/incidents" class="btn-secondary" style="display:inline-block; text-decoration:none;margin-top:12px">
+                Clear All Filters
+            </a>
+        </div>
+        {% endif %}
     {% else %}
     <table class="incidents-table">
         <thead>

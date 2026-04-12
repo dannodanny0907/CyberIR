@@ -100,9 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Risk bar animation
     const riskFill = document.querySelector('.risk-score-fill-large');
     if (riskFill) {
-        const target = riskFill.dataset.target;
+        const riskScore = parseFloat(document.getElementById('riskScoreValue')?.textContent || '0') || 0;
         setTimeout(() => {
-            riskFill.style.width = target + '%';
+            riskFill.style.width = riskScore + '%';
         }, 300);
     }
 

@@ -1,4 +1,7 @@
-.detail-container { display: grid; grid-template-columns: 65fr 35fr; gap: 20px; align-items: start; }
+.detail-container { padding: 0 10px; }
+.detail-grid { display: grid; grid-template-columns: 65fr 35fr; gap: 20px; align-items: start; margin-top: 10px; }
+.detail-left { display: flex; flex-direction: column; gap: 16px; }
+.detail-right { display: flex; flex-direction: column; gap: 16px; }
 /* Use existing .card from base.css */
 .card-section-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
 .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f8fafc; font-size: 0.875rem; }

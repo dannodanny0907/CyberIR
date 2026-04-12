@@ -192,13 +192,10 @@ def run_similarity(new_incident_id):
     except Exception as e:
         print(f"Similarity error: {e}")
         return {"found": False, "matches": [], "suggestion": None, "error": str(e)}
-    finally:
-        conn.close()
 
 def get_cached_similarity(incident_id_str):
     conn = get_db_connection()
     inc = conn.execute('SELECT id, similar_incident_id, similarity_score, reported_date FROM incidents WHERE incident_id = ?', (incident_id_str,)).fetchone()
-    conn.close()
     if not inc:
         return {"found": False, "matches": []}
         

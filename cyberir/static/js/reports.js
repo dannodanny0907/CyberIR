@@ -23,11 +23,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${diffDays} day${diffDays > 1 ? 's': ''} ago`;
     };
 
-    document.querySelectorAll('.activity-time').forEach(el => {
-        const dateStr = el.dataset.time;
+    document.querySelectorAll('[data-created]').forEach(el => {
+        const dateStr = el.dataset.created;
         if (dateStr) {
-            el.textContent = formatTimeAgo(dateStr);
-            el.title = new Date(dateStr + " UTC").toLocaleString();
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            let text = '';
+            if (diff < 60) text = 'just now';
+            else if (diff < 3600) text = Math.floor(diff/60) + 'm ago';
+            else if (diff < 86400) text = Math.floor(diff/3600) + 'h ago';
+            else text = Math.floor(diff/86400) + 'd ago';
+            el.textContent = text;
         }
     });
 });

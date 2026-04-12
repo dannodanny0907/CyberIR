@@ -206,8 +206,6 @@ def run_correlation(new_incident_id):
     except Exception as e:
         print(f"Correlation error: {e}")
         return {"clustered": False, "cluster_id": None, "matches": [], "error": str(e)}
-    finally:
-        conn.close()
 
 def recalculate_cluster(cluster_id):
     conn = get_db_connection()

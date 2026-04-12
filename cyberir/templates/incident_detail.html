@@ -9,7 +9,13 @@
 
 {% block content %}
 <div class="detail-container">
-    <div class="left-col">
+    <nav class="breadcrumb">
+      <a href="/incidents">Incidents</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>{{ incident.incident_id }}</span>
+    </nav>
+    <div class="detail-grid">
+        <div class="detail-left">
         <!-- Card 1 -->
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
@@ -99,9 +105,9 @@
                 {% if incident.priority == 'Critical' %}{% set color = '#dc2626' %}
                 {% elif incident.priority == 'High' %}{% set color = '#ea580c' %}
                 {% elif incident.priority == 'Medium' %}{% set color = '#2563eb' %}{% endif %}
-                <div style="font-size: 2.5rem; font-weight: 800; color: {{ color }};">{{ incident.risk_score }}</div>
+                <div id="riskScoreValue" style="font-size: 2.5rem; font-weight: 800; color: {{ color }};">{{ incident.risk_score or 0 }}</div>
                 <div class="risk-score-bar-large">
-                    <div class="risk-score-fill-large" style="width: 0%; background: {{ color }};" data-target="{{ incident.risk_score }}"></div>
+                    <div class="risk-score-fill-large" style="width: 0%; background: {{ color }};" data-target="{{ incident.risk_score or 0 }}"></div>
                 </div>
             </div>
         </div>
@@ -117,8 +123,8 @@
                 <span class="detail-label">Time to Resolve</span>
                 <span class="detail-value">
                     {% if incident.resolution_time_minutes %}
-                        {% set h = incident.resolution_time_minutes // 60 %}
-                        {% set m = incident.resolution_time_minutes % 60 %}
+                        {% set h = (incident.resolution_time_minutes or 0) // 60 %}
+                        {% set m = (incident.resolution_time_minutes or 0) % 60 %}
                         {% if h > 0 %}{{ h }} hours {% endif %}{{ m }} minutes
                     {% else %}
                         —
@@ -151,7 +157,7 @@
         </div>
     </div>
 
-    <div class="right-col">
+    <div class="detail-right">
         <!-- Right Card 1: Details -->
         <div class="card">
             <div class="card-section-title">Incident Details</div>
@@ -275,7 +281,7 @@
                 <div style="font-weight:700; margin-bottom:8px;">{{ incident.cluster_id }} Grouping</div>
                 <div style="display:flex; gap:6px; margin-bottom: 12px; font-size:0.8rem;">
                     <span class="badge" style="background:#f1f5f9; color:#475569;">Correlation Match</span>
-                    <span class="badge" style="background:#eff6ff; color:#2563eb;">{{ (incident.correlation_score * 100)|round|int }}% Confidence</span>
+                    <span class="badge" style="background:#eff6ff; color:#2563eb;">{{ ((incident.correlation_score or 0) * 100)|round|int }}% Confidence</span>
                 </div>
                 
                 {% if other_incidents_in_cluster %}
@@ -302,6 +308,7 @@
                 </div>
             {% endif %}
         </div>
+    </div>
     </div>
 </div>
 <!-- Delete Confirmation Modal -->

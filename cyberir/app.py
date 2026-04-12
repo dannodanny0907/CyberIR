@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
 app = Flask(__name__)
+
+APP_VERSION = "1.0.0"
+APP_NAME = "CyberIR"
+
 # PART 7: SESSION SECURITY
 app.secret_key = os.environ.get('SECRET_KEY', 'cyberir-secret-key-change-in-production-2026')
 if not app.secret_key or app.secret_key == 'dev':
@@ -106,7 +110,7 @@ def load_user(user_id):
 @app.context_processor
 def inject_globals():
     if not current_user.is_authenticated:
-        return {'unread_alerts_count': 0}
+        return {'unread_alerts_count': 0, 'active_page': '', 'app_version': APP_VERSION, 'app_name': APP_NAME}
         
     db = get_db_connection()
     count_row = db.execute('''
@@ -122,8 +126,16 @@ def inject_globals():
     return {
         'unread_alerts_count': count_row['count'] if count_row else 0,
         'active_correlation_clusters': clusters_row['count'] if clusters_row else 0,
-        'similarity_matches_count': sim_count['count'] if sim_count else 0
+        'similarity_matches_count': sim_count['count'] if sim_count else 0,
+        'active_page': '',
+        'app_version': APP_VERSION,
+        'app_name': APP_NAME
     }
+
+def get_request_data():
+    if request.is_json:
+        return request.get_json()
+    return request.form
 
 @app.route('/')
 def index():
@@ -689,9 +701,20 @@ def incident_detail(incident_id_str):
             LIMIT 4
         ''', (incident['cluster_id'], incident['id'])).fetchall()
     
+    incident_data = dict(incident)
+    incident_data['risk_score'] = incident['risk_score'] or 0
+    incident_data['asset_criticality'] = incident['asset_criticality'] or 0
+    incident_data['threat_severity'] = incident['threat_severity'] or 0
+    incident_data['vulnerability_exposure'] = incident['vulnerability_exposure'] or 0
+    incident_data['users_affected'] = incident['users_affected'] or 0
+    incident_data['resolution_time_minutes'] = incident['resolution_time_minutes'] or 0
+    incident_data['correlation_score'] = incident['correlation_score'] or 0
+    incident_data['similarity_score'] = incident['similarity_score'] or 0
+    incident_data['is_repeat'] = incident['is_repeat'] or 0
+
     return render_template('incident_detail.html', 
         active_page='incidents', 
-        incident=incident, 
+        incident=incident_data, 
         activities=activities, 
         alerts=alerts,
         analysts=analysts,
@@ -937,19 +960,6 @@ def remove_incident_from_cluster(incident_id_str):
     result = remove_from_cluster(inc['id'])
     return jsonify(result)
 
-@app.route('/correlation/run-test')
-@login_required
-def run_correlation_test():
-    if current_user.role != 'Admin':
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-        
-    db = get_db_connection()
-    inc = db.execute('SELECT id FROM incidents ORDER BY id DESC LIMIT 1').fetchone()
-    if not inc:
-        return jsonify({'error': 'no incidents found to correlate'})
-        
-    result = run_correlation(inc['id'])
-    return jsonify(result)
 
 @app.route('/correlation')
 @login_required
@@ -1392,18 +1402,6 @@ def apply_solution(incident_id_str):
     db.commit()
     return jsonify({'success': True})
 
-@app.route('/similarity/run-test/<incident_id_str>')
-@login_required
-def run_similarity_test(incident_id_str):
-    if current_user.role != 'Admin':
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-        
-    db = get_db_connection()
-    inc = db.execute('SELECT id FROM incidents WHERE incident_id = ?', (incident_id_str,)).fetchone()
-    if not inc: return jsonify({'error': 'Incident not found'})
-    
-    res = run_similarity(inc['id'])
-    return jsonify(res)
 
 @app.route('/api/similarity-stats')
 @login_required
@@ -1461,6 +1459,153 @@ def similarity():
             return jsonify({'success': False, 'message': 'An error occurred'}), 500
         flash('An error occurred. Please try again.', 'error')
         return redirect(url_for('dashboard'))
+import csv
+from io import StringIO
+from flask import Response
+
+@app.route('/reports')
+@login_required
+def reports():
+    try:
+        if current_user.role not in ['Admin', 'Analyst'] or (current_user.role == 'Analyst' and not current_user.has_admin_privileges):
+            flash("Access denied. You do not have permission to view reports.", "error")
+            return redirect(url_for('dashboard'))
+            
+        db = get_db_connection()
+        
+        # Correlation metrics
+        total_clusters_created = db.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c']
+        active_clusters = db.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c']
+        resolved_clusters = db.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Resolved'").fetchone()['c']
+        
+        avg_cluster_size_row = db.execute("SELECT AVG(incident_count) as a FROM incident_clusters").fetchone()['a']
+        avg_cluster_size = round(avg_cluster_size_row, 1) if avg_cluster_size_row else 0
+        
+        total_correlated_incidents = db.execute("SELECT COUNT(*) as c FROM incidents WHERE cluster_id IS NOT NULL").fetchone()['c']
+        
+        largest_cluster_row = db.execute("SELECT MAX(incident_count) as m FROM incident_clusters").fetchone()['m']
+        largest_cluster = largest_cluster_row if largest_cluster_row else 0
+        
+        # Similarity metrics
+        total_matches_found = db.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c']
+        high_confidence = db.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75").fetchone()['c']
+        medium_confidence = db.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.50 AND similarity_score < 0.75").fetchone()['c']
+        solutions_applied = db.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c']
+        
+        avg_similarity_score_row = db.execute("SELECT AVG(similarity_score) as a FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['a']
+        avg_similarity_score = round(avg_similarity_score_row, 2) if avg_similarity_score_row else 0
+        
+        # General incident metrics
+        total_incidents = db.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c']
+        open_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c']
+        investigating_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'").fetchone()['c']
+        resolved_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Resolved'").fetchone()['c']
+        closed_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Closed'").fetchone()['c']
+        
+        avg_resolution_time_row = db.execute("SELECT AVG(resolution_time_minutes) as a FROM incidents WHERE resolution_time_minutes IS NOT NULL").fetchone()['a']
+        avg_resolution_time = avg_resolution_time_row if avg_resolution_time_row else 0
+        
+        critical_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical'").fetchone()['c']
+        high_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='High'").fetchone()['c']
+        medium_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Medium'").fetchone()['c']
+        low_count = db.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Low'").fetchone()['c']
+        
+        # Recent activity logs
+        recent_activity = db.execute('''
+            SELECT al.*, u.full_name, u.role
+            FROM activity_logs al
+            JOIN users u ON al.user_id = u.id
+            ORDER BY al.created_at DESC
+            LIMIT 20
+        ''').fetchall()
+        
+        metrics = {
+            'total_clusters_created': total_clusters_created,
+            'active_clusters': active_clusters,
+            'resolved_clusters': resolved_clusters,
+            'avg_cluster_size': avg_cluster_size,
+            'total_correlated_incidents': total_correlated_incidents,
+            'largest_cluster': largest_cluster,
+            
+            'total_matches_found': total_matches_found,
+            'high_confidence': high_confidence,
+            'medium_confidence': medium_confidence,
+            'solutions_applied': solutions_applied,
+            'avg_similarity_score': avg_similarity_score,
+            
+            'total_incidents': total_incidents,
+            'open_count': open_count,
+            'investigating_count': investigating_count,
+            'resolved_count': resolved_count,
+            'closed_count': closed_count,
+            'avg_resolution_time': avg_resolution_time,
+            'critical_count': critical_count,
+            'high_count': high_count,
+            'medium_count': medium_count,
+            'low_count': low_count
+        }
+        
+        return render_template('reports.html', active_page='reports', metrics=metrics, recent_activity=[dict(row) for row in recent_activity])
+    except Exception as e:
+        app.logger.error(f'Error in reports: {str(e)}')
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'An error occurred'}), 500
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/reports/export/incidents')
+@login_required
+def export_incidents():
+    if current_user.role not in ['Admin', 'Analyst'] or (current_user.role == 'Analyst' and not current_user.has_admin_privileges):
+        flash("Access denied. You do not have permission to view reports.", "error")
+        return redirect(url_for('dashboard'))
+    db = get_db_connection()
+    rows = db.execute("SELECT * FROM incidents ORDER BY reported_date DESC").fetchall()
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    if rows:
+        cw.writerow(rows[0].keys())
+        cw.writerows(rows)
+    return Response(si.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=incidents.csv"})
+
+@app.route('/reports/export/clusters')
+@login_required
+def export_clusters():
+    if current_user.role not in ['Admin', 'Analyst'] or (current_user.role == 'Analyst' and not current_user.has_admin_privileges):
+        flash("Access denied. You do not have permission to view reports.", "error")
+        return redirect(url_for('dashboard'))
+    db = get_db_connection()
+    rows = db.execute("SELECT * FROM incident_clusters ORDER BY created_at DESC").fetchall()
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    if rows:
+        cw.writerow(rows[0].keys())
+        cw.writerows(rows)
+    return Response(si.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=clusters.csv"})
+
+@app.route('/reports/export/activity')
+@login_required
+def export_activity():
+    if current_user.role not in ['Admin', 'Analyst'] or (current_user.role == 'Analyst' and not current_user.has_admin_privileges):
+        flash("Access denied. You do not have permission to view reports.", "error")
+        return redirect(url_for('dashboard'))
+    db = get_db_connection()
+    rows = db.execute('''
+        SELECT al.*, u.full_name, u.role
+        FROM activity_logs al
+        JOIN users u ON al.user_id = u.id
+        ORDER BY al.created_at DESC
+    ''').fetchall()
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    if rows:
+        cw.writerow(rows[0].keys())
+        cw.writerows(rows)
+    return Response(si.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=activity_logs.csv"})
+
 @app.route('/settings')
 @login_required
 def settings_page():
@@ -1888,6 +2033,66 @@ def profile_update_avatar_color():
     current_user.avatar_color = color
     return jsonify({"success": True})
 
+@app.route('/health')
+def health_check():
+    db_status = "connected"
+    tables = {}
+    try:
+        db = get_db_connection()
+        tables['users'] = db.execute('SELECT COUNT(*) as c FROM users').fetchone()['c']
+        tables['incidents'] = db.execute('SELECT COUNT(*) as c FROM incidents').fetchone()['c']
+        tables['clusters'] = db.execute('SELECT COUNT(*) as c FROM incident_clusters').fetchone()['c']
+        tables['alerts'] = db.execute('SELECT COUNT(*) as c FROM alerts').fetchone()['c']
+    except Exception as e:
+        db_status = "error"
+        app.logger.error(f'Database health check failed: {str(e)}')
+        
+    return jsonify({
+        "status": "healthy",
+        "app": APP_NAME,
+        "version": APP_VERSION,
+        "database": db_status,
+        "tables": tables
+    })
+
+@app.route('/admin/system-info')
+@login_required
+def system_info():
+    if current_user.role != 'Admin':
+        return jsonify({"error": "Unauthorized"}), 403
+        
+    try:
+        db = get_db_connection()
+        total_inc = db.execute('SELECT COUNT(*) as c FROM incidents').fetchone()['c']
+        total_usr = db.execute('SELECT COUNT(*) as c FROM users').fetchone()['c']
+        total_clst = db.execute('SELECT COUNT(*) as c FROM incident_clusters').fetchone()['c']
+        total_alrt = db.execute('SELECT COUNT(*) as c FROM alerts').fetchone()['c']
+        total_logs = db.execute('SELECT COUNT(*) as c FROM activity_logs').fetchone()['c']
+        
+        # Get settings
+        settings_rows = db.execute("SELECT setting_key, setting_value FROM settings").fetchall()
+        st = {r['setting_key']: r['setting_value'] for r in settings_rows}
+        
+        db_size = 0
+        if os.path.exists('cyberir.db'):
+            db_size = os.path.getsize('cyberir.db') // 1024
+            
+        return jsonify({
+            "database_size_kb": db_size,
+            "total_incidents": total_inc,
+            "total_users": total_usr,
+            "total_clusters": total_clst,
+            "total_alerts": total_alrt,
+            "total_activity_logs": total_logs,
+            "algorithms": {
+                "correlation_threshold": float(st.get('correlation_threshold', 0.65)),
+                "similarity_threshold": float(st.get('similarity_threshold', 0.50)),
+                "correlation_window": int(st.get('correlation_window_hours', 48))
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, 'db', None)
@@ -1901,4 +2106,15 @@ if __name__ == '__main__':
         create_default_admin(app)
         print("Database initialized.")
             
-    app.run(port=5000, debug=True)
+    print("=" * 50)
+    print("Starting CyberIR...")
+    print("URL: http://localhost:5000")
+    print("Admin: admin@cyberir.com")
+    print("Password: Admin@1234")
+    print("=" * 50)
+    app.run(
+        debug=True,
+        host='0.0.0.0',
+        port=5000,
+        use_reloader=True
+    )

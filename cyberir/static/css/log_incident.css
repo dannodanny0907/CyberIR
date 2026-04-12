@@ -15,3 +15,18 @@
 .form-actions-bar { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
 .btn-submit { padding: 10px 24px; font-size: 0.95rem; }
 .error-msg { color: #dc2626; font-size: 0.75rem; margin-top: 4px; display: none; }
+.field-error-msg {
+  color: #dc2626;
+  font-size: 0.78rem;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field-error {
+  border-color: #dc2626 !important;
+  background: #fff5f5;
+}
+.field-error:focus {
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.1) !important;
+}

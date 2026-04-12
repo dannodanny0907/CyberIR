@@ -82,31 +82,144 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (form) {
         form.addEventListener('submit', (e) => {
-            let isValid = true;
-            let firstErrorEl = null;
-            document.querySelectorAll('.error-msg').forEach(e => e.style.display = 'none');
-            
-            const reqFields = ['title', 'incident_type', 'affected_asset', 'asset_criticality', 'threat_severity', 'vulnerability_exposure'];
-            
-            reqFields.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el.value) {
-                    isValid = false;
-                    const err = document.getElementById(id + 'Error');
-                    if (err) err.style.display = 'block';
-                    if (!firstErrorEl) firstErrorEl = el;
-                }
-            });
-            
-            if (!isValid) {
+            if (!validateIncidentForm()) {
                 e.preventDefault();
-                firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                firstErrorEl.focus();
             } else {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '🛡️ Logging incident...';
-                form.submit();
+                if (typeof setButtonLoading === 'function') {
+                    setButtonLoading(submitBtn, true, '🛡️ Logging...');
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '🛡️ Logging incident...';
+                }
             }
         });
     }
+
+    document.querySelectorAll('input, select, textarea').forEach(field => {
+        field.addEventListener('input', function() {
+            this.classList.remove('field-error');
+            this.style.borderColor = '';
+            const err = document.getElementById(this.id + '_error');
+            if (err) err.remove();
+        });
+    });
 });
+
+function validateIncidentForm() {
+    clearAllErrors()
+    let isValid = true
+    let firstError = null
+
+    // Title validation
+    const title = document.getElementById('title')?.value.trim()
+    if (!title) {
+        showError('title', 'Incident title is required')
+        if (!firstError) firstError = 'title'
+        isValid = false
+    } else if (title.length < 5) {
+        showError('title', 'Title must be at least 5 characters')
+        if (!firstError) firstError = 'title'
+        isValid = false
+    } else if (title.length > 200) {
+        showError('title', 'Title must be under 200 characters')
+        isValid = false
+    }
+
+    // Incident type validation
+    const type = document.getElementById('incident_type')?.value
+    if (!type) {
+        showError('incident_type', 'Please select an incident type')
+        if (!firstError) firstError = 'incident_type'
+        isValid = false
+    }
+
+    // Affected asset validation
+    const asset = document.getElementById('affected_asset')?.value.trim()
+    if (!asset) {
+        showError('affected_asset', 'Affected asset is required')
+        if (!firstError) firstError = 'affected_asset'
+        isValid = false
+    }
+
+    // Asset criticality validation
+    const criticality = document.getElementById('asset_criticality')?.value
+    if (!criticality || criticality === '') {
+        showError('asset_criticality', 'Please rate the asset criticality')
+        if (!firstError) firstError = 'asset_criticality'
+        isValid = false
+    }
+
+    // Threat severity validation
+    const severity = document.getElementById('threat_severity')?.value
+    if (!severity || severity === '') {
+        showError('threat_severity', 'Please rate the threat severity')
+        if (!firstError) firstError = 'threat_severity'
+        isValid = false
+    }
+
+    // Vulnerability exposure validation
+    const exposure = document.getElementById('vulnerability_exposure')?.value
+    if (!exposure || exposure === '') {
+        showError('vulnerability_exposure', 'Please rate the vulnerability exposure')
+        if (!firstError) firstError = 'vulnerability_exposure'
+        isValid = false
+    }
+
+    // Users affected validation
+    const usersAffected = parseInt(document.getElementById('users_affected')?.value)
+    if (isNaN(usersAffected) || usersAffected < 0) {
+        showError('users_affected', 'Users affected must be 0 or more')
+        isValid = false
+    }
+
+    // IP address validation (optional but if filled)
+    const ip = document.getElementById('ip_address')?.value.trim()
+    if (ip && !isValidIP(ip)) {
+        showError('ip_address', 'Please enter a valid IP address')
+        isValid = false
+    }
+
+    // Scroll to first error
+    if (firstError) {
+        const el = document.getElementById(firstError)
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            el.focus()
+        }
+    }
+
+    return isValid
+}
+
+function isValidIP(ip) {
+    const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/
+    const ipv6 = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/
+    if (ipv4.test(ip)) {
+        return ip.split('.').every(part => parseInt(part) <= 255)
+    }
+    return ipv6.test(ip) || ip === 'localhost'
+}
+
+function showError(fieldId, message) {
+    const field = document.getElementById(fieldId)
+    if (!field) return
+    field.classList.add('field-error')
+    field.style.borderColor = '#dc2626'
+
+    let errorEl = document.getElementById(fieldId + '_error')
+    if (!errorEl) {
+        errorEl = document.createElement('div')
+        errorEl.id = fieldId + '_error'
+        errorEl.className = 'field-error-msg'
+        field.parentNode.insertBefore(errorEl, field.nextSibling)
+    }
+    errorEl.textContent = '⚠ ' + message
+}
+
+function clearAllErrors() {
+    document.querySelectorAll('.field-error').forEach(f => {
+        f.classList.remove('field-error')
+        f.style.borderColor = ''
+    })
+    document.querySelectorAll('.field-error-msg').forEach(e => e.remove())
+}
