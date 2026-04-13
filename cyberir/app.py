@@ -1,33 +1,54 @@
+from flask import (Flask, render_template,
+    redirect, url_for, flash, request, jsonify)
+from flask_login import (login_required, current_user)
+from auth import auth, login_manager
+from database import (get_db_connection, init_db,
+    create_default_admin)
 import os
-from flask import Flask, redirect, url_for, render_template
-from flask_login import LoginManager, current_user, login_required
-from database import init_db, create_default_admin, get_db_connection
-from auth import auth_bp, User
 
 app = Flask(__name__)
-app.secret_key = 'cyberir_super_secret_key'
+app.secret_key = 'cyberir-secret-key-2026'
 
-login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
 login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+app.register_blueprint(auth)
 
-@login_manager.user_loader
-def load_user(user_id):
-    conn = get_db_connection()
-    user_row = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    conn.close()
-    if user_row:
-        return User(
-            id=user_row['id'],
-            full_name=user_row['full_name'],
-            email=user_row['email'],
-            role=user_row['role'],
-            has_admin_privileges=user_row['has_admin_privileges'],
-            is_active=user_row['is_active']
-        )
-    return None
+@app.context_processor
+def inject_globals():
+    try:
+        if current_user.is_authenticated:
+            conn = get_db_connection()
+            unread_alerts_count = conn.execute(
+                """SELECT COUNT(*) as c FROM alerts
+                   WHERE (recipient_id=? 
+                     OR recipient_role=?)
+                   AND is_read=0 
+                   AND dismissed=0""",
+                [current_user.id,
+                 current_user.role]
+            ).fetchone()['c']
+            active_clusters = conn.execute(
+                """SELECT COUNT(*) as c 
+                   FROM incident_clusters
+                   WHERE status='Active'"""
+            ).fetchone()['c']
+            conn.close()
+            return {
+                'unread_alerts_count': unread_alerts_count,
+                'active_correlation_clusters': active_clusters,
+                'app_version': '1.0.0',
+                'app_name': 'CyberIR'
+            }
+    except:
+        pass
+    return {
+        'unread_alerts_count': 0,
+        'active_correlation_clusters': 0,
+        'app_version': '1.0.0',
+        'app_name': 'CyberIR'
+    }
 
-app.register_blueprint(auth_bp, url_prefix='')
+# ─── REDIRECT ROUTES ───────────────────────────
 
 @app.route('/')
 def index():
@@ -35,13 +56,1231 @@ def index():
         return redirect(url_for('dashboard'))
     return redirect(url_for('auth.login'))
 
+@app.route('/login')
+def login_page():
+    return redirect(url_for('auth.login'))
+
+# ─── DASHBOARD ─────────────────────────────────
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    try:
+        conn = get_db_connection()
+        total_incidents = conn.execute(
+            'SELECT COUNT(*) as c FROM incidents'
+        ).fetchone()['c']
+        open_incidents = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE status='Open'"
+        ).fetchone()['c']
+        investigating_incidents = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'"
+        ).fetchone()['c']
+        resolved_incidents = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE status IN ('Resolved','Closed')"
+        ).fetchone()['c']
+        critical_incidents = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE priority='Critical' AND status NOT IN ('Resolved','Closed')"
+        ).fetchone()['c']
+        active_clusters = conn.execute(
+            "SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'"
+        ).fetchone()['c']
+        total_correlated = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE cluster_id IS NOT NULL"
+        ).fetchone()['c']
+        incidents_by_status = [dict(r) for r in conn.execute(
+            "SELECT status, COUNT(*) as count FROM incidents GROUP BY status"
+        ).fetchall()]
+        incidents_by_priority = [dict(r) for r in conn.execute(
+            "SELECT priority, COUNT(*) as count FROM incidents WHERE priority IS NOT NULL GROUP BY priority"
+        ).fetchall()]
+        incidents_by_type = [dict(r) for r in conn.execute(
+            "SELECT incident_type, COUNT(*) as count FROM incidents GROUP BY incident_type ORDER BY count DESC"
+        ).fetchall()]
+        daily_trend = [dict(r) for r in conn.execute(
+            "SELECT DATE(reported_date) as date, COUNT(*) as count FROM incidents WHERE reported_date >= DATE('now','-14 days') GROUP BY DATE(reported_date) ORDER BY date ASC"
+        ).fetchall()]
+        resolution_by_type = [dict(r) for r in conn.execute(
+            "SELECT incident_type, ROUND(AVG(resolution_time_minutes)/60.0,1) as avg_hours FROM incidents WHERE resolution_time_minutes IS NOT NULL AND status IN ('Resolved','Closed') GROUP BY incident_type ORDER BY avg_hours DESC"
+        ).fetchall()]
+        top_incidents = conn.execute(
+            "SELECT i.*, u.full_name as assigned_name FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id WHERE i.status IN ('Open','Investigating') ORDER BY i.risk_score DESC LIMIT 5"
+        ).fetchall()
+        recent_clusters = conn.execute(
+            "SELECT * FROM incident_clusters ORDER BY last_updated DESC LIMIT 5"
+        ).fetchall()
+        recent_incidents = conn.execute(
+            "SELECT * FROM incidents ORDER BY reported_date DESC LIMIT 5"
+        ).fetchall()
+        total_similarity_matches = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL"
+        ).fetchone()['c']
+        high_confidence_matches = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75"
+        ).fetchone()['c']
+        solutions_applied = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL"
+        ).fetchone()['c']
+        recent_similarity = conn.execute(
+            "SELECT i.*, si.title as matched_title FROM incidents i LEFT JOIN incidents si ON i.similar_incident_id=si.incident_id WHERE i.similar_incident_id IS NOT NULL ORDER BY i.reported_date DESC LIMIT 5"
+        ).fetchall()
+        today_count = conn.execute(
+            "SELECT COUNT(*) as c FROM incidents WHERE DATE(reported_date)=DATE('now')"
+        ).fetchone()['c']
+        conn.close()
+        return render_template('dashboard.html',
+            total_incidents=total_incidents,
+            open_incidents=open_incidents,
+            investigating_incidents=investigating_incidents,
+            resolved_incidents=resolved_incidents,
+            critical_incidents=critical_incidents,
+            active_clusters=active_clusters,
+            total_correlated=total_correlated,
+            incidents_by_status=incidents_by_status,
+            incidents_by_priority=incidents_by_priority,
+            incidents_by_type=incidents_by_type,
+            daily_trend=daily_trend,
+            resolution_by_type=resolution_by_type,
+            top_incidents=top_incidents,
+            recent_clusters=recent_clusters,
+            recent_incidents=recent_incidents,
+            total_similarity_matches=total_similarity_matches,
+            high_confidence_matches=high_confidence_matches,
+            solutions_applied=solutions_applied,
+            recent_similarity=recent_similarity,
+            today_count=today_count,
+            active_page='dashboard')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return render_template('dashboard.html',
+            total_incidents=0, open_incidents=0,
+            investigating_incidents=0,
+            resolved_incidents=0,
+            critical_incidents=0,
+            active_clusters=0, total_correlated=0,
+            incidents_by_status=[],
+            incidents_by_priority=[],
+            incidents_by_type=[],
+            daily_trend=[], resolution_by_type=[],
+            top_incidents=[], recent_clusters=[],
+            recent_incidents=[],
+            total_similarity_matches=0,
+            high_confidence_matches=0,
+            solutions_applied=0,
+            recent_similarity=[],
+            today_count=0,
+            active_page='dashboard')
+
+# ─── INCIDENTS ─────────────────────────────────
+
+@app.route('/incidents')
+@login_required
+def incidents():
+    try:
+        conn = get_db_connection()
+        status_filter = request.args.get('status','')
+        priority_filter = request.args.get('priority','')
+        type_filter = request.args.get('incident_type','')
+        search = request.args.get('search','')
+        sort = request.args.get('sort','reported_date')
+        order = request.args.get('order','desc').lower()
+        page = int(request.args.get('page',1))
+        per_page = int(request.args.get('per_page',25))
+
+        where_clauses = []
+        params = []
+
+        if status_filter and status_filter not in ('', 'All Statuses'):
+            where_clauses.append("i.status=?")
+            params.append(status_filter)
+        if priority_filter and priority_filter not in ('', 'All Priorities'):
+            where_clauses.append("i.priority=?")
+            params.append(priority_filter)
+        if type_filter and type_filter not in ('', 'All Types'):
+            where_clauses.append("i.incident_type=?")
+            params.append(type_filter)
+        if search:
+            where_clauses.append("(i.title LIKE ? OR i.incident_id LIKE ? OR i.affected_asset LIKE ?)")
+            params.extend([f'%{search}%']*3)
+
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        allowed = ['reported_date','risk_score','priority','status','incident_id','title','incident_type','affected_asset']
+        if sort not in allowed: sort = 'reported_date'
+        if order not in ('asc','desc'): order = 'desc'
+        order_sql = 'DESC' if order == 'desc' else 'ASC'
+
+        base_q = f"SELECT i.*, u.full_name as assigned_name FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id {where_sql}"
+        count_q = f"SELECT COUNT(*) as count FROM incidents i {where_sql}"
+
+        total_count = conn.execute(count_q, params).fetchone()['count']
+        offset = (page-1)*per_page
+        incidents_list = conn.execute(
+            f"{base_q} ORDER BY i.{sort} {order_sql} LIMIT ? OFFSET ?",
+            params + [per_page, offset]
+        ).fetchall()
+
+        all_count   = conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c']
+        open_count  = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c']
+        inv_count   = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'").fetchone()['c']
+        res_count   = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status IN ('Resolved','Closed')").fetchone()['c']
+        analysts    = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
+        conn.close()
+
+        return render_template('incidents.html',
+            incidents=incidents_list,
+            total_count=total_count,
+            stats={'total': all_count, 'open': open_count,
+                   'investigating': inv_count, 'resolved': res_count},
+            analysts=analysts,
+            page=page, per_page=per_page,
+            sort=sort, order=order,
+            active_filters=len(where_clauses),
+            active_page='incidents')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading incidents.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/incidents/log', methods=['GET','POST'])
+@login_required
+def log_incident():
+    if current_user.role == 'Viewer':
+        flash('No permission to log incidents.','error')
+        return redirect(url_for('incidents'))
+    try:
+        conn = get_db_connection()
+        if request.method == 'POST':
+            title = request.form.get('title','').strip()
+            incident_type = request.form.get('incident_type','')
+            description = request.form.get('description','')
+            affected_asset = request.form.get('affected_asset','').strip()
+            affected_department = request.form.get('affected_department','')
+            users_affected = int(request.form.get('users_affected',0) or 0)
+            ip_address = request.form.get('ip_address','')
+            attack_indicators = request.form.get('attack_indicators','')
+            asset_criticality = int(request.form.get('asset_criticality',1) or 1)
+            threat_severity = int(request.form.get('threat_severity',1) or 1)
+            vulnerability_exposure = int(request.form.get('vulnerability_exposure',1) or 1)
+            is_repeat = 1 if request.form.get('is_repeat') else 0
+            assigned_to = request.form.get('assigned_to') or None
+            reported_date = request.form.get('reported_date') or None
+            resolution_notes = request.form.get('resolution_notes','')
+            ua = (1 if users_affected==0 else 2 if users_affected<=5 else 3 if users_affected<=20 else 4 if users_affected<=100 else 5)
+            raw = (asset_criticality*0.30 + threat_severity*0.30 + vulnerability_exposure*0.15 + ua*0.20 + (5 if is_repeat else 1)*0.05)
+            risk_score = round((raw/5)*100,2)
+            priority = ('Critical' if risk_score>=75 else 'High' if risk_score>=50 else 'Medium' if risk_score>=25 else 'Low')
+            from database import get_next_incident_id
+            incident_id = get_next_incident_id()
+            cursor = conn.execute(
+                "INSERT INTO incidents (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,status,assigned_to,reported_date,resolution_notes,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Open',?,?,?,?,datetime('now'),datetime('now'))",
+                (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,assigned_to,reported_date,resolution_notes,current_user.id))
+            new_id = cursor.lastrowid
+            conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'CREATE_INCIDENT','incident',?)",[current_user.id,new_id])
+            conn.commit()
+            conn.close()
+            try:
+                from correlation_engine import run_correlation
+                run_correlation(new_id)
+            except: pass
+            try:
+                from similarity_engine import run_similarity
+                run_similarity(new_id)
+            except: pass
+            flash(f'Incident {incident_id} logged successfully.','success')
+            return redirect(url_for('incidents'))
+        analysts = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
+        conn.close()
+        return render_template('log_incident.html', analysts=analysts, active_page='incidents')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error logging incident.','error')
+        return redirect(url_for('incidents'))
+
+@app.route('/incidents/<incident_id>')
+@login_required
+def incident_detail(incident_id):
+    try:
+        conn = get_db_connection()
+        incident = conn.execute(
+            "SELECT i.*, u.full_name as assigned_name, c.full_name as creator_name FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id LEFT JOIN users c ON i.created_by=c.id WHERE i.incident_id=?",
+            [incident_id]).fetchone()
+        if not incident:
+            flash('Incident not found.','error')
+            return redirect(url_for('incidents'))
+        incident = dict(incident)
+        for f in ['risk_score','correlation_score','similarity_score']:
+            incident[f] = float(incident.get(f) or 0)
+        for f in ['asset_criticality','threat_severity','vulnerability_exposure','users_affected','resolution_time_minutes','is_repeat']:
+            incident[f] = int(incident.get(f) or 0)
+        activity = conn.execute(
+            "SELECT al.*, u.full_name FROM activity_logs al JOIN users u ON al.user_id=u.id WHERE al.target_id=? AND al.target_type='incident' ORDER BY al.created_at DESC",
+            [incident['id']]).fetchall()
+        analysts = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
+        cluster = None
+        if incident.get('cluster_id'):
+            cluster = conn.execute("SELECT * FROM incident_clusters WHERE cluster_id=?",[incident['cluster_id']]).fetchone()
+        conn.close()
+        return render_template('incident_detail.html',
+            incident=incident, activity=activity,
+            analysts=analysts, cluster=cluster,
+            active_page='incidents')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading incident.','error')
+        return redirect(url_for('incidents'))
+
+@app.route('/incidents/<incident_id>/edit', methods=['GET','POST'])
+@login_required
+def edit_incident(incident_id):
+    if current_user.role == 'Viewer':
+        flash('No permission to edit incidents.','error')
+        return redirect(url_for('incidents'))
+    try:
+        conn = get_db_connection()
+        incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        if not incident:
+            flash('Incident not found.','error')
+            return redirect(url_for('incidents'))
+        if request.method == 'POST':
+            title = request.form.get('title','').strip()
+            incident_type = request.form.get('incident_type','')
+            description = request.form.get('description','')
+            affected_asset = request.form.get('affected_asset','').strip()
+            affected_department = request.form.get('affected_department','')
+            users_affected = int(request.form.get('users_affected',0) or 0)
+            ip_address = request.form.get('ip_address','')
+            attack_indicators = request.form.get('attack_indicators','')
+            asset_criticality = int(request.form.get('asset_criticality',1) or 1)
+            threat_severity = int(request.form.get('threat_severity',1) or 1)
+            vulnerability_exposure = int(request.form.get('vulnerability_exposure',1) or 1)
+            is_repeat = 1 if request.form.get('is_repeat') else 0
+            assigned_to = request.form.get('assigned_to') or None
+            reported_date = request.form.get('reported_date') or None
+            ua = (1 if users_affected==0 else 2 if users_affected<=5 else 3 if users_affected<=20 else 4 if users_affected<=100 else 5)
+            raw = (asset_criticality*0.30 + threat_severity*0.30 + vulnerability_exposure*0.15 + ua*0.20 + (5 if is_repeat else 1)*0.05)
+            risk_score = round((raw/5)*100,2)
+            priority = ('Critical' if risk_score>=75 else 'High' if risk_score>=50 else 'Medium' if risk_score>=25 else 'Low')
+            conn.execute(
+                "UPDATE incidents SET title=?,description=?,incident_type=?,affected_asset=?,affected_department=?,users_affected=?,ip_address=?,attack_indicators=?,asset_criticality=?,threat_severity=?,vulnerability_exposure=?,is_repeat=?,risk_score=?,priority=?,assigned_to=?,reported_date=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
+                (title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,assigned_to,reported_date,current_user.id,incident_id))
+            conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'UPDATE_INCIDENT','incident',?,?)",[current_user.id,incident['id'],f'Edited by {current_user.full_name}'])
+            conn.commit()
+            conn.close()
+            flash(f'Incident {incident_id} updated.','success')
+            return redirect(url_for('incident_detail',incident_id=incident_id))
+        analysts = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
+        conn.close()
+        return render_template('edit_incident.html',
+            incident=dict(incident),
+            analysts=analysts,
+            active_page='incidents')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error editing incident.','error')
+        return redirect(url_for('incidents'))
+
+@app.route('/incidents/assign/<incident_id>', methods=['POST'])
+@login_required
+def assign_incident(incident_id):
+    try:
+        conn = get_db_connection()
+        assigned_to = request.form.get('assigned_to') or None
+        conn.execute("UPDATE incidents SET assigned_to=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",[assigned_to,current_user.id,incident_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'ASSIGN_INCIDENT','incident',?)",[current_user.id,f'Assigned {incident_id}'])
+        conn.commit()
+        assigned_name = 'Unassigned'
+        if assigned_to:
+            u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone()
+            if u: assigned_name = u['full_name']
+        conn.close()
+        return jsonify({'success':True,'assigned_name':assigned_name})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/incidents/update-status/<incident_id>', methods=['POST'])
+@login_required
+def update_incident_status(incident_id):
+    try:
+        conn = get_db_connection()
+        new_status = request.form.get('new_status','')
+        updates = "status=?,updated_at=datetime('now'),updated_by=?"
+        params = [new_status, current_user.id]
+        if new_status == 'Investigating':
+            updates += ",investigating_started_date=datetime('now')"
+        elif new_status == 'Closed':
+            updates += ",closed_date=datetime('now')"
+        params.append(incident_id)
+        conn.execute(f"UPDATE incidents SET {updates} WHERE incident_id=?", params)
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','incident',?)",[current_user.id,f'Status changed to {new_status}'])
+        conn.commit()
+        conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/incidents/resolve/<incident_id>', methods=['POST'])
+@login_required
+def resolve_incident(incident_id):
+    try:
+        conn = get_db_connection()
+        resolution_notes = request.form.get('resolution_notes','').strip()
+        if not resolution_notes:
+            return jsonify({'success':False,'message':'Resolution notes required'})
+        incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        reported = incident['reported_date']
+        conn.execute(
+            "UPDATE incidents SET status='Resolved',resolved_date=datetime('now'),resolution_notes=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
+            [resolution_notes,current_user.id,incident_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'RESOLVE_INCIDENT','incident',?)",[current_user.id,f'Resolved {incident_id}'])
+        conn.commit()
+        conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/incidents/delete/<incident_id>', methods=['POST'])
+@login_required
+def delete_incident(incident_id):
+    if current_user.role != 'Admin':
+        return jsonify({'success':False,'message':'Admin only'})
+    try:
+        conn = get_db_connection()
+        incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        if not incident:
+            return jsonify({'success':False,'message':'Not found'})
+        if incident['cluster_id']:
+            return jsonify({'success':False,'message':'Cannot delete a correlated incident'})
+        conn.execute("DELETE FROM alerts WHERE incident_id=?",[incident['id']])
+        conn.execute("DELETE FROM incidents WHERE incident_id=?",[incident_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,details) VALUES (?,'DELETE_INCIDENT',?)",[current_user.id,f'Deleted {incident_id}'])
+        conn.commit()
+        conn.close()
+        return jsonify({'success':True,'redirect':url_for('incidents')})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/incidents/remove-from-cluster/<incident_id>', methods=['POST'])
+@login_required
+def remove_from_cluster(incident_id):
+    if current_user.role != 'Admin':
+        return jsonify({'success':False})
+    try:
+        from correlation_engine import remove_from_cluster as rfc
+        incident = get_db_connection().execute("SELECT id FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        result = rfc(incident['id'])
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/incidents/apply-solution/<incident_id>', methods=['POST'])
+@login_required
+def apply_solution(incident_id):
+    try:
+        data = request.get_json() or request.form
+        source_id = data.get('source_incident_id','')
+        notes = data.get('resolution_notes','')
+        conn = get_db_connection()
+        conn.execute(
+            "UPDATE incidents SET resolution_notes=?,solution_applied_from=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
+            [notes,source_id,current_user.id,incident_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,details) VALUES (?,'UPDATE_INCIDENT',?)",[current_user.id,f'Solution applied from {source_id}'])
+        conn.commit()
+        conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+# ─── CORRELATION ───────────────────────────────
+
+@app.route('/correlation')
+@login_required
+def correlation():
+    try:
+        conn = get_db_connection()
+        clusters = conn.execute("SELECT * FROM incident_clusters ORDER BY last_updated DESC").fetchall()
+        clusters_list = []
+        for cl in clusters:
+            d = dict(cl)
+            d['incidents'] = conn.execute("SELECT * FROM incidents WHERE cluster_id=? ORDER BY reported_date DESC",[cl['cluster_id']]).fetchall()
+            clusters_list.append(d)
+        stats = {
+            'total_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
+            'active_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
+            'investigating_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Investigating'").fetchone()['c'],
+            'resolved_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Resolved'").fetchone()['c'],
+            'total_correlated_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE cluster_id IS NOT NULL").fetchone()['c'],
+        }
+        conn.close()
+        return render_template('correlation.html',
+            clusters=clusters_list,
+            stats=stats,
+            active_page='correlation')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading correlation.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/correlation/<cluster_id>')
+@login_required
+def correlation_detail(cluster_id):
+    try:
+        conn = get_db_connection()
+        cluster = conn.execute("SELECT * FROM incident_clusters WHERE cluster_id=?",[cluster_id]).fetchone()
+        if not cluster:
+            flash('Cluster not found.','error')
+            return redirect(url_for('correlation'))
+        cluster = dict(cluster)
+        cluster['incident_count'] = int(cluster.get('incident_count') or 0)
+        cluster['severity'] = cluster.get('severity') or 'Medium'
+        cluster['status'] = cluster.get('status') or 'Active'
+        cluster['notes'] = cluster.get('notes') or ''
+        incidents_in = conn.execute("SELECT i.*, u.full_name as assigned_name FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id WHERE i.cluster_id=? ORDER BY i.reported_date ASC",[cluster_id]).fetchall()
+        incidents_list = []
+        for inc in incidents_in:
+            d = dict(inc)
+            d['risk_score'] = float(d.get('risk_score') or 0)
+            d['correlation_score'] = float(d.get('correlation_score') or 0)
+            incidents_list.append(d)
+        cluster_alerts = conn.execute("SELECT * FROM alerts WHERE cluster_id=? ORDER BY created_at DESC LIMIT 5",[cluster_id]).fetchall()
+        analysts = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
+        assigned_user = None
+        if cluster.get('assigned_to'):
+            assigned_user = conn.execute("SELECT full_name FROM users WHERE id=?",[cluster['assigned_to']]).fetchone()
+        conn.close()
+        return render_template('correlation_detail.html',
+            cluster=cluster,
+            incidents=incidents_list,
+            cluster_alerts=cluster_alerts,
+            analysts=analysts,
+            assigned_user=assigned_user,
+            active_page='correlation')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f'Error loading cluster: {str(e)}','error')
+        return redirect(url_for('correlation'))
+
+@app.route('/correlation/update-status/<cluster_id>', methods=['POST'])
+@login_required
+def update_cluster_status(cluster_id):
+    try:
+        data = request.get_json() or request.form
+        new_status = data.get('new_status','')
+        conn = get_db_connection()
+        conn.execute("UPDATE incident_clusters SET status=?,last_updated=datetime('now') WHERE cluster_id=?",[new_status,cluster_id])
+        conn.commit()
+        conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/correlation/assign/<cluster_id>', methods=['POST'])
+@login_required
+def assign_cluster(cluster_id):
+    try:
+        data = request.get_json() or request.form
+        assigned_to = data.get('assigned_to') or None
+        conn = get_db_connection()
+        conn.execute("UPDATE incident_clusters SET assigned_to=? WHERE cluster_id=?",[assigned_to,cluster_id])
+        conn.commit()
+        assigned_name = 'Unassigned'
+        if assigned_to:
+            u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone()
+            if u: assigned_name = u['full_name']
+        conn.close()
+        return jsonify({'success':True,'assigned_name':assigned_name})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/correlation/add-note/<cluster_id>', methods=['POST'])
+@login_required
+def add_cluster_note(cluster_id):
+    try:
+        data = request.get_json() or request.form
+        note = data.get('note','').strip()
+        if not note:
+            return jsonify({'success':False,'message':'Note required'})
+        conn = get_db_connection()
+        cluster = conn.execute("SELECT notes FROM incident_clusters WHERE cluster_id=?",[cluster_id]).fetchone()
+        existing = cluster['notes'] or ''
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+        new_notes = f"{existing}\n[{timestamp}] {current_user.full_name}: {note}".strip()
+        conn.execute("UPDATE incident_clusters SET notes=?,last_updated=datetime('now') WHERE cluster_id=?",[new_notes,cluster_id])
+        conn.commit()
+        conn.close()
+        return jsonify({'success':True,'note':f'[{timestamp}] {current_user.full_name}: {note}'})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+# ─── SIMILARITY ────────────────────────────────
+
+@app.route('/similarity')
+@login_required
+def similarity():
+    try:
+        conn = get_db_connection()
+        rows = conn.execute("""
+            SELECT i.*,
+                   si.incident_id  as similar_to_id,
+                   si.title        as similar_to_title,
+                   si.status       as similar_status,
+                   si.resolution_notes as similar_resolution
+            FROM incidents i
+            LEFT JOIN incidents si ON i.similar_incident_id = si.incident_id
+            WHERE i.similar_incident_id IS NOT NULL
+            ORDER BY i.similarity_score DESC, i.reported_date DESC
+        """).fetchall()
+        # convert to dicts so templates can access by name
+        incidents_list = [dict(r) for r in rows]
+        total_with_similarity = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c']
+        high_confidence = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75").fetchone()['c']
+        solution_applied = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c']
+        avg_val = conn.execute("SELECT AVG(similarity_score) as a FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['a']
+        avg_similarity = round((avg_val or 0) * 100, 1)  # template shows as percentage
+        conn.close()
+        return render_template('similarity.html',
+            incidents=incidents_list,
+            total_with_similarity=total_with_similarity,
+            high_confidence=high_confidence,
+            solution_applied=solution_applied,
+            avg_similarity=avg_similarity,
+            active_page='similarity')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading similarity.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/api/similarity/<incident_id>')
+@login_required
+def api_similarity(incident_id):
+    try:
+        conn = get_db_connection()
+        incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        conn.close()
+        if not incident:
+            return jsonify({'found':False,'matches':[]})
+        from similarity_engine import run_similarity
+        result = run_similarity(incident['id'])
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'found':False,'matches':[],'error':str(e)})
+
+# ─── ALERTS ────────────────────────────────────
+
+@app.route('/alerts')
+@login_required
+def alerts():
+    try:
+        conn = get_db_connection()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 50))
+        offset = (page - 1) * per_page
+        alerts_list = conn.execute(
+            "SELECT * FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND dismissed=0 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            [current_user.id, current_user.role, per_page, offset]
+        ).fetchall()
+        total_count  = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
+        unread_count = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
+        critical_count = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND severity='CRITICAL' AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
+        conn.close()
+        return render_template('alerts.html',
+            alerts=alerts_list,
+            total_count=total_count,
+            unread_count=unread_count,
+            critical_count=critical_count,
+            page=page,
+            per_page=per_page,
+            active_page='alerts')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading alerts.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/alerts/mark-read/<int:alert_id>', methods=['POST'])
+@login_required
+def mark_alert_read(alert_id):
+    try:
+        conn = get_db_connection()
+        conn.execute("UPDATE alerts SET is_read=1,read_at=datetime('now') WHERE id=?",[alert_id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except: return jsonify({'success':False})
+
+@app.route('/alerts/mark-all-read', methods=['POST'])
+@login_required
+def mark_all_alerts_read():
+    try:
+        conn = get_db_connection()
+        conn.execute("UPDATE alerts SET is_read=1,read_at=datetime('now') WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except: return jsonify({'success':False})
+
+@app.route('/alerts/dismiss/<int:alert_id>', methods=['POST'])
+@login_required
+def dismiss_alert(alert_id):
+    try:
+        conn = get_db_connection()
+        conn.execute("UPDATE alerts SET dismissed=1,dismissed_at=datetime('now') WHERE id=?",[alert_id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except: return jsonify({'success':False})
+
+@app.route('/alerts/dismiss-all-read', methods=['POST'])
+@login_required
+def dismiss_all_read_alerts():
+    try:
+        conn = get_db_connection()
+        conn.execute("UPDATE alerts SET dismissed=1,dismissed_at=datetime('now') WHERE (recipient_id=? OR recipient_role=?) AND is_read=1 AND dismissed=0",[current_user.id,current_user.role])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except: return jsonify({'success':False})
+
+# ─── REPORTS ───────────────────────────────────
+
+@app.route('/reports')
+@login_required
+def reports():
+    if current_user.role != 'Admin' and not current_user.has_admin_privileges:
+        flash('Access denied.','error')
+        return redirect(url_for('dashboard'))
+    try:
+        conn = get_db_connection()
+        metrics = {
+            'total_clusters_created': conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
+            'active_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
+            'resolved_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Resolved'").fetchone()['c'],
+            'avg_cluster_size': round(conn.execute("SELECT AVG(incident_count) as a FROM incident_clusters").fetchone()['a'] or 0,1),
+            'total_correlated_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE cluster_id IS NOT NULL").fetchone()['c'],
+            'largest_cluster': conn.execute("SELECT MAX(incident_count) as m FROM incident_clusters").fetchone()['m'] or 0,
+            'total_matches_found': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c'],
+            'high_confidence': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75").fetchone()['c'],
+            'medium_confidence': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.50 AND similarity_score < 0.75").fetchone()['c'],
+            'solutions_applied': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c'],
+            'avg_similarity_score': round(conn.execute("SELECT AVG(similarity_score) as a FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['a'] or 0,2),
+            'total_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
+            'open_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c'],
+            'investigating_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'").fetchone()['c'],
+            'resolved_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Resolved'").fetchone()['c'],
+            'closed_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Closed'").fetchone()['c'],
+            'avg_resolution_time': conn.execute("SELECT AVG(resolution_time_minutes) as a FROM incidents WHERE resolution_time_minutes IS NOT NULL").fetchone()['a'] or 0,
+            'critical_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical'").fetchone()['c'],
+            'high_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='High'").fetchone()['c'],
+            'medium_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Medium'").fetchone()['c'],
+            'low_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Low'").fetchone()['c'],
+        }
+        recent_activity = conn.execute("SELECT al.*, u.full_name, u.role FROM activity_logs al JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC LIMIT 20").fetchall()
+        conn.close()
+        return render_template('reports.html',
+            metrics=metrics,
+            recent_activity=recent_activity,
+            active_page='reports')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading reports.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/reports/export/incidents')
+@login_required
+def export_incidents():
+    import csv
+    from io import StringIO
+    from flask import Response
+    conn = get_db_connection()
+    rows = conn.execute("SELECT i.incident_id,i.title,i.incident_type,i.priority,i.status,i.risk_score,i.affected_asset,i.affected_department,u.full_name as assigned_to,i.cluster_id,i.similar_incident_id,i.similarity_score,i.reported_date,i.resolved_date,i.resolution_time_minutes FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id").fetchall()
+    conn.close()
+    si = StringIO()
+    w = csv.writer(si)
+    w.writerow(['incident_id','title','incident_type','priority','status','risk_score','affected_asset','affected_department','assigned_to','cluster_id','similar_incident_id','similarity_score','reported_date','resolved_date','resolution_time_minutes'])
+    for r in rows: w.writerow(list(r))
+    return Response(si.getvalue(), mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=incidents_export.csv'})
+
+@app.route('/reports/export/clusters')
+@login_required
+def export_clusters():
+    import csv
+    from io import StringIO
+    from flask import Response
+    conn = get_db_connection()
+    rows = conn.execute("SELECT cluster_id,cluster_name,incident_count,primary_type,severity,status,first_detected,last_updated FROM incident_clusters").fetchall()
+    conn.close()
+    si = StringIO()
+    w = csv.writer(si)
+    w.writerow(['cluster_id','cluster_name','incident_count','primary_type','severity','status','first_detected','last_updated'])
+    for r in rows: w.writerow(list(r))
+    return Response(si.getvalue(), mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=clusters_export.csv'})
+
+@app.route('/reports/export/activity')
+@login_required
+def export_activity():
+    import csv
+    from io import StringIO
+    from flask import Response
+    conn = get_db_connection()
+    rows = conn.execute("SELECT u.full_name,al.action_type,al.target_type,al.target_id,al.details,al.ip_address,al.created_at FROM activity_logs al JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC").fetchall()
+    conn.close()
+    si = StringIO()
+    w = csv.writer(si)
+    w.writerow(['user_name','action_type','target_type','target_id','details','ip_address','created_at'])
+    for r in rows: w.writerow(list(r))
+    return Response(si.getvalue(), mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=activity_export.csv'})
+
+# ─── SETTINGS ──────────────────────────────────
+
+@app.route('/settings')
+@login_required
+def settings():
+    if current_user.role != 'Admin':
+        flash('Access denied.','error')
+        return redirect(url_for('dashboard'))
+    try:
+        conn = get_db_connection()
+        rows = conn.execute("SELECT * FROM settings").fetchall()
+        settings_dict = {r['setting_key']:r['setting_value'] for r in rows}
+        system_info = {
+            'total_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
+            'total_users': conn.execute("SELECT COUNT(*) as c FROM users WHERE is_active=1").fetchone()['c'],
+            'total_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
+            'total_alerts': conn.execute("SELECT COUNT(*) as c FROM alerts").fetchone()['c'],
+            'total_logs': conn.execute("SELECT COUNT(*) as c FROM activity_logs").fetchone()['c'],
+        }
+        conn.close()
+        return render_template('settings.html',
+            settings=settings_dict,
+            system_info=system_info,
+            active_page='settings')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading settings.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/settings/algorithm', methods=['POST'])
+@login_required
+def save_algorithm_settings():
+    if current_user.role != 'Admin':
+        return jsonify({'success':False,'message':'Admin only'})
+    try:
+        data = request.get_json() or request.form
+        conn = get_db_connection()
+        for key in ['correlation_threshold','correlation_time_window_hours','similarity_threshold','similarity_result_limit']:
+            val = data.get(key)
+            if val is not None:
+                conn.execute("UPDATE settings SET setting_value=?,updated_by=?,updated_at=datetime('now') WHERE setting_key=?",[val,current_user.id,key])
+        conn.commit(); conn.close()
+        return jsonify({'success':True,'message':'Algorithm settings saved'})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/settings/sla', methods=['POST'])
+@login_required
+def save_sla_settings():
+    if current_user.role != 'Admin':
+        return jsonify({'success':False})
+    try:
+        data = request.get_json() or request.form
+        conn = get_db_connection()
+        for key in ['critical_sla_hours','high_sla_hours','medium_sla_hours','low_sla_hours']:
+            val = data.get(key)
+            if val is not None:
+                conn.execute("UPDATE settings SET setting_value=?,updated_by=?,updated_at=datetime('now') WHERE setting_key=?",[val,current_user.id,key])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/settings/system', methods=['POST'])
+@login_required
+def save_system_settings():
+    if current_user.role != 'Admin':
+        return jsonify({'success':False})
+    try:
+        data = request.get_json() or request.form
+        conn = get_db_connection()
+        for key in ['organization_name','incident_id_prefix']:
+            val = data.get(key)
+            if val is not None:
+                conn.execute("INSERT INTO settings (setting_key,setting_value,setting_type) VALUES (?,?,'string') ON CONFLICT(setting_key) DO UPDATE SET setting_value=?,updated_by=?,updated_at=datetime('now')",[key,val,val,current_user.id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/settings/reset-defaults', methods=['POST'])
+@login_required
+def reset_settings():
+    if current_user.role != 'Admin':
+        return jsonify({'success':False})
+    try:
+        conn = get_db_connection()
+        defaults = [('correlation_threshold','0.65'),('correlation_time_window_hours','48'),('similarity_threshold','0.50'),('similarity_result_limit','5'),('critical_sla_hours','4'),('high_sla_hours','24'),('medium_sla_hours','72'),('low_sla_hours','168'),('organization_name','CyberIR'),('incident_id_prefix','INC-')]
+        for key,val in defaults:
+            conn.execute("UPDATE settings SET setting_value=? WHERE setting_key=?",[val,key])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/settings/test-correlation')
+@login_required
+def test_correlation():
+    if current_user.role != 'Admin':
+        return jsonify({'error':'Admin only'}),403
+    try:
+        incident_id = request.args.get('incident_id')
+        conn = get_db_connection()
+        inc = conn.execute("SELECT id FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        conn.close()
+        if not inc: return jsonify({'error':'Not found'}),404
+        from correlation_engine import run_correlation
+        result = run_correlation(inc['id'])
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error':str(e)})
+
+@app.route('/settings/test-similarity')
+@login_required
+def test_similarity():
+    if current_user.role != 'Admin':
+        return jsonify({'error':'Admin only'}),403
+    try:
+        incident_id = request.args.get('incident_id')
+        conn = get_db_connection()
+        inc = conn.execute("SELECT id FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        conn.close()
+        if not inc: return jsonify({'error':'Not found'}),404
+        from similarity_engine import run_similarity
+        result = run_similarity(inc['id'])
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error':str(e)})
+
+# ─── USERS ─────────────────────────────────────
+
+@app.route('/users')
+@login_required
+def users():
+    if current_user.role != 'Admin':
+        flash('Access denied.','error')
+        return redirect(url_for('dashboard'))
+    try:
+        conn = get_db_connection()
+        users_list = conn.execute("SELECT * FROM users ORDER BY created_at ASC").fetchall()
+        conn.close()
+        return render_template('users.html',
+            users=users_list,
+            active_page='users')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading users.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/users/add', methods=['POST'])
+@login_required
+def add_user():
+    if current_user.role != 'Admin':
+        return jsonify({'success':False,'message':'Admin only'})
+    try:
+        from werkzeug.security import generate_password_hash
+        full_name = request.form.get('full_name','').strip()
+        email = request.form.get('email','').strip()
+        role = request.form.get('role','Analyst')
+        password = request.form.get('password','')
+        phone = request.form.get('phone_number','')
+        has_priv = 1 if request.form.get('has_admin_privileges') else 0
+        conn = get_db_connection()
+        if conn.execute("SELECT id FROM users WHERE email=?",[email]).fetchone():
+            conn.close()
+            return jsonify({'success':False,'message':'Email already exists'})
+        cursor = conn.execute("INSERT INTO users (full_name,email,password_hash,role,has_admin_privileges,phone_number,is_active,created_by) VALUES (?,?,?,?,?,?,1,?)",(full_name,email,generate_password_hash(password),role,has_priv,phone,current_user.id))
+        new_id = cursor.lastrowid
+        conn.execute("INSERT OR IGNORE INTO user_preferences (user_id) VALUES (?)",[new_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'CREATE_USER','user',?)",[current_user.id,new_id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True,'message':'User created'})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/users/edit/<int:user_id>', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    if current_user.role != 'Admin':
+        return jsonify({'success':False})
+    try:
+        from werkzeug.security import generate_password_hash
+        full_name = request.form.get('full_name','').strip()
+        email = request.form.get('email','').strip()
+        phone = request.form.get('phone_number','')
+        role = request.form.get('role','Analyst')
+        has_priv = 1 if request.form.get('has_admin_privileges') else 0
+        password = request.form.get('password','')
+        conn = get_db_connection()
+        if password:
+            conn.execute("UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=?,password_hash=? WHERE id=?",[full_name,email,phone,role,has_priv,generate_password_hash(password),user_id])
+        else:
+            conn.execute("UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=? WHERE id=?",[full_name,email,phone,role,has_priv,user_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'UPDATE_USER','user',?)",[current_user.id,user_id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/users/toggle-status/<int:user_id>', methods=['POST'])
+@login_required
+def toggle_user_status(user_id):
+    if current_user.role != 'Admin': return jsonify({'success':False})
+    if user_id == 1 or user_id == current_user.id:
+        return jsonify({'success':False,'message':'Cannot deactivate this user'})
+    try:
+        conn = get_db_connection()
+        u = conn.execute("SELECT is_active FROM users WHERE id=?",[user_id]).fetchone()
+        new_s = 0 if u['is_active'] else 1
+        conn.execute("UPDATE users SET is_active=? WHERE id=?",[new_s,user_id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True,'status':'active' if new_s else 'inactive'})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/users/delete/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    if current_user.role != 'Admin': return jsonify({'success':False})
+    if user_id == 1 or user_id == current_user.id:
+        return jsonify({'success':False,'message':'Cannot delete this user'})
+    try:
+        conn = get_db_connection()
+        conn.execute("DELETE FROM user_preferences WHERE user_id=?",[user_id])
+        conn.execute("DELETE FROM users WHERE id=?",[user_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type) VALUES (?,'DELETE_USER')",[current_user.id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+# ─── PROFILE ───────────────────────────────────
+
+@app.route('/profile')
+@login_required
+def profile():
+    try:
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE id=?",[current_user.id]).fetchone()
+        prefs = conn.execute("SELECT * FROM user_preferences WHERE user_id=?",[current_user.id]).fetchone()
+        if not prefs:
+            conn.execute("INSERT OR IGNORE INTO user_preferences (user_id) VALUES (?)",[current_user.id])
+            conn.commit()
+            prefs = conn.execute("SELECT * FROM user_preferences WHERE user_id=?",[current_user.id]).fetchone()
+        stats = {
+            'incidents_created': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE created_by=?",[current_user.id]).fetchone()['c'],
+            'incidents_assigned': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE assigned_to=?",[current_user.id]).fetchone()['c'],
+            'incidents_resolved': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE assigned_to=? AND status IN ('Resolved','Closed')",[current_user.id]).fetchone()['c'],
+            'alerts_unread': conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c'],
+        }
+        recent_activity = conn.execute("SELECT * FROM activity_logs WHERE user_id=? ORDER BY created_at DESC LIMIT 10",[current_user.id]).fetchall()
+        conn.close()
+        return render_template('profile.html',
+            user=user, prefs=prefs, stats=stats,
+            recent_activity=recent_activity,
+            active_page='profile')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading profile.','error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    try:
+        data = request.get_json() or request.form
+        full_name = data.get('full_name','').strip()
+        phone = data.get('phone_number','')
+        if not full_name:
+            return jsonify({'success':False,'message':'Name required'})
+        conn = get_db_connection()
+        conn.execute("UPDATE users SET full_name=?,phone_number=? WHERE id=?",[full_name,phone,current_user.id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type) VALUES (?,'UPDATE_USER')",[current_user.id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True,'message':'Profile updated','new_name':full_name})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/profile/change-password', methods=['POST'])
+@login_required
+def change_password():
+    try:
+        from werkzeug.security import (check_password_hash,
+            generate_password_hash)
+        data = request.get_json() or request.form
+        current_pwd = data.get('current_password','')
+        new_pwd = data.get('new_password','')
+        confirm_pwd = data.get('confirm_password','')
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE id=?",[current_user.id]).fetchone()
+        if not check_password_hash(user['password_hash'],current_pwd):
+            conn.close()
+            return jsonify({'success':False,'field':'current_password','message':'Current password is incorrect'})
+        if len(new_pwd) < 8:
+            conn.close()
+            return jsonify({'success':False,'field':'new_password','message':'Minimum 8 characters'})
+        if new_pwd != confirm_pwd:
+            conn.close()
+            return jsonify({'success':False,'field':'confirm_password','message':'Passwords do not match'})
+        conn.execute("UPDATE users SET password_hash=? WHERE id=?",[generate_password_hash(new_pwd),current_user.id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True,'message':'Password changed'})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/profile/update-preferences', methods=['POST'])
+@login_required
+def update_preferences():
+    try:
+        data = request.get_json() or request.form
+        conn = get_db_connection()
+        conn.execute(
+            """INSERT INTO user_preferences 
+               (user_id,email_notifications,
+                email_critical_alerts,
+                email_assignments,
+                email_correlation_alerts,
+                email_daily_summary,
+                in_app_alert_sound,dark_mode,
+                items_per_page)
+               VALUES (?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(user_id) DO UPDATE SET
+               email_notifications=excluded.email_notifications,
+               email_critical_alerts=excluded.email_critical_alerts,
+               email_assignments=excluded.email_assignments,
+               email_correlation_alerts=excluded.email_correlation_alerts,
+               email_daily_summary=excluded.email_daily_summary,
+               in_app_alert_sound=excluded.in_app_alert_sound,
+               dark_mode=excluded.dark_mode,
+               items_per_page=excluded.items_per_page""",
+            [current_user.id,
+             int(data.get('email_notifications',1)),
+             int(data.get('email_critical_alerts',1)),
+             int(data.get('email_assignments',1)),
+             int(data.get('email_correlation_alerts',1)),
+             int(data.get('email_daily_summary',0)),
+             int(data.get('in_app_alert_sound',1)),
+             int(data.get('dark_mode',0)),
+             int(data.get('items_per_page',25))])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/profile/update-avatar-color', methods=['POST'])
+@login_required
+def update_avatar_color():
+    try:
+        data = request.get_json() or request.form
+        color = data.get('avatar_color','#2563eb')
+        conn = get_db_connection()
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN avatar_color TEXT DEFAULT '#2563eb'")
+            conn.commit()
+        except: pass
+        conn.execute("UPDATE users SET avatar_color=? WHERE id=?",[color,current_user.id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+# ─── API ROUTES ────────────────────────────────
+
+@app.route('/api/alert-count')
+@login_required
+def api_alert_count():
+    try:
+        conn = get_db_connection()
+        count = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
+        conn.close()
+        return jsonify({'count':count})
+    except: return jsonify({'count':0})
+
+@app.route('/api/dashboard-stats')
+@login_required
+def api_dashboard_stats():
+    try:
+        conn = get_db_connection()
+        data = {
+            'active_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
+            'open_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c'],
+            'critical_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical' AND status NOT IN ('Resolved','Closed')").fetchone()['c'],
+            'total_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
+            'unread_alerts': conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c'],
+            'total_similarity_matches': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c'],
+            'solutions_applied': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c'],
+            'investigating_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'").fetchone()['c'],
+            'resolved_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status IN ('Resolved','Closed')").fetchone()['c'],
+        }
+        conn.close()
+        return jsonify(data)
+    except: return jsonify({'active_clusters':0,'open_incidents':0,'critical_incidents':0,'total_incidents':0,'unread_alerts':0})
+
+@app.route('/health')
+def health():
+    try:
+        conn = get_db_connection()
+        counts = {
+            'users': conn.execute("SELECT COUNT(*) as c FROM users").fetchone()['c'],
+            'incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
+            'clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
+            'alerts': conn.execute("SELECT COUNT(*) as c FROM alerts").fetchone()['c'],
+        }
+        conn.close()
+        return jsonify({'status':'healthy','app':'CyberIR','version':'1.0.0','database':'connected','tables':counts})
+    except Exception as e:
+        return jsonify({'status':'unhealthy','database':'error','error':str(e)})
+
+@app.route('/admin/rerun-algorithms/<incident_id>', methods=['POST'])
+@login_required
+def rerun_algorithms(incident_id):
+    if current_user.role != 'Admin':
+        return jsonify({'success':False}),403
+    try:
+        conn = get_db_connection()
+        inc = conn.execute("SELECT id FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
+        conn.close()
+        if not inc: return jsonify({'success':False,'message':'Not found'}),404
+        from correlation_engine import run_correlation
+        from similarity_engine import run_similarity
+        corr = run_correlation(inc['id'])
+        sim = run_similarity(inc['id'])
+        return jsonify({'success':True,'correlation':corr,'similarity':sim})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+# ─── ERROR HANDLERS ────────────────────────────
+
+@app.errorhandler(404)
+def not_found(e):
+    if request.is_json:
+        return jsonify({'error':'Not found','code':404}),404
+    return render_template('errors/404.html'),404
+
+@app.errorhandler(403)
+def forbidden(e):
+    if request.is_json:
+        return jsonify({'error':'Forbidden','code':403}),403
+    return render_template('errors/403.html'),403
+
+@app.errorhandler(500)
+def server_error(e):
+    if request.is_json:
+        return jsonify({'error':'Internal server error','code':500}),500
+    return render_template('errors/500.html'),500
+
+# ─── STARTUP ───────────────────────────────────
 
 if __name__ == '__main__':
-    with app.app_context():
-        init_db()
-        create_default_admin()
-    app.run(port=5000, debug=True)
+    init_db()
+    create_default_admin()
+    print("="*50)
+    print("Starting CyberIR...")
+    print("URL: http://localhost:5000")
+    print("Admin: admin@cyberir.com / Admin@1234")
+    print("="*50)
+    app.run(debug=True, host='0.0.0.0', port=5000)
