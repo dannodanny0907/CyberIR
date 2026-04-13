@@ -24,7 +24,6 @@
             <a href="/incidents" class="{{ 'active' if active_page == 'incidents' else '' }}">
                 <span class="icon">📋</span> Incidents
             </a>
-            <div class="nav-section-label">Algorithms</div>
             <a href="/correlation" class="{{ 'active' if active_page == 'correlation' else '' }}">
                 <span class="icon">🔗</span> Correlation
             </a>
@@ -57,24 +56,96 @@
             {% endif %}
         </nav>
         
-        <div class="sidebar-user">
-            <a href="/profile" class="sidebar-user-link" style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
-                {% set initials = current_user.full_name[0].upper() ~ (current_user.full_name.split()[-1][0].upper() if current_user.full_name.split()|length > 1 else '') %}
-                <div class="avatar-circle" id="sidebarAvatar" style="background: {{ current_user.avatar_color if current_user.avatar_color else '#2563eb' }}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">
-                    {{ initials }}
+        <div class="sidebar-user-wrapper">
+          
+          <!-- Clickable profile trigger -->
+          <div class="sidebar-user-trigger" 
+            id="profileTrigger">
+            
+            <div class="avatar-circle" 
+              id="sidebarAvatar"
+              style="background: {{ current_user.avatar_color 
+                if current_user.avatar_color 
+                else '#2563eb' }}">
+              {{ current_user.full_name[0].upper() }}
+              {%- if current_user.full_name.split()|length > 1 -%}
+                {{ current_user.full_name.split()[-1][0].upper() }}
+              {%- endif %}
+            </div>
+            
+            <div class="sidebar-user-info" style="display:flex; flex-direction:column; min-width:0;">
+              <div class="sidebar-user-name" id="sidebarUserName" style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ current_user.full_name }}
+              </div>
+              <span class="role-badge role-{{ current_user.role.lower() }}" style="margin-top:2px;">
+                {{ current_user.role }}
+              </span>
+            </div>
+            
+            <span class="profile-chevron">▲</span>
+            
+          </div>
+
+          <!-- Dropdown popup menu -->
+          <div class="profile-dropdown" 
+            id="profileDropdown">
+            
+            <!-- User info header -->
+            <div class="dropdown-header">
+              <div class="dropdown-avatar"
+                style="background: {{ current_user.avatar_color 
+                  if current_user.avatar_color 
+                  else '#2563eb' }}">
+                {{ current_user.full_name[0].upper() }}
+                {%- if current_user.full_name.split()|length > 1 -%}
+                  {{ current_user.full_name.split()[-1][0].upper() }}
+                {%- endif %}
+              </div>
+              <div class="dropdown-user-details">
+                <div class="dropdown-name">
+                  {{ current_user.full_name }}
                 </div>
-                <div class="sidebar-user-info" style="display:flex; flex-direction:column; min-width:0;">
-                    <div class="sidebar-user-name" id="sidebarUserName" style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        {{ current_user.full_name }}
-                    </div>
-                    <span class="role-badge role-{{ current_user.role|lower }}" style="margin-top:2px;">
-                        {{ current_user.role }}
-                    </span>
+                <div class="dropdown-email">
+                  {{ current_user.email }}
                 </div>
+              </div>
+            </div>
+            
+            <div class="dropdown-divider"></div>
+            
+            <!-- Menu items -->
+            <a href="/profile" class="dropdown-item">
+              <span class="dropdown-item-icon">👤</span>
+              <span>My Profile</span>
             </a>
-            <a href="/auth/logout" class="sidebar-logout" style="font-size:0.8rem; color:var(--text-secondary); text-decoration:none; margin-top:12px; display:inline-block;">
-                Logout
+            
+            <a href="/profile" class="dropdown-item">
+              <span class="dropdown-item-icon">🔔</span>
+              <span>Notification Preferences</span>
             </a>
+            
+            <a href="/profile" class="dropdown-item">
+              <span class="dropdown-item-icon">🔒</span>
+              <span>Change Password</span>
+            </a>
+            
+            {% if current_user.role == 'Admin' %}
+            <a href="/settings" class="dropdown-item">
+              <span class="dropdown-item-icon">⚙️</span>
+              <span>System Settings</span>
+            </a>
+            {% endif %}
+            
+            <div class="dropdown-divider"></div>
+            
+            <a href="/auth/logout" 
+              class="dropdown-item dropdown-logout">
+              <span class="dropdown-item-icon">🚪</span>
+              <span>Log Out</span>
+            </a>
+            
+          </div>
+
         </div>
         <div class="sidebar-version">
             {{ app_name }} v{{ app_version }}

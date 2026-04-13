@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     full_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE users (
     created_by INTEGER REFERENCES users(id)
 );
 
-CREATE TABLE incidents (
+CREATE TABLE IF NOT EXISTS incidents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     incident_id TEXT UNIQUE NOT NULL,
     title TEXT NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE incidents (
     updated_by INTEGER REFERENCES users(id)
 );
 
-CREATE TABLE incident_clusters (
+CREATE TABLE IF NOT EXISTS incident_clusters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     cluster_id TEXT UNIQUE NOT NULL,
     cluster_name TEXT,
@@ -63,7 +63,7 @@ CREATE TABLE incident_clusters (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE alerts (
+CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     alert_type TEXT NOT NULL CHECK(alert_type IN ('HIGH_PRIORITY','CORRELATION','SIMILARITY','SLA_BREACH','ASSIGNMENT','ESCALATION','SYSTEM')),
     severity TEXT NOT NULL CHECK(severity IN ('CRITICAL','WARNING','INFO')),
@@ -79,7 +79,7 @@ CREATE TABLE alerts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE activity_logs (
+CREATE TABLE IF NOT EXISTS activity_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id),
     action_type TEXT NOT NULL CHECK(action_type IN ('LOGIN','LOGOUT','CREATE_INCIDENT','UPDATE_INCIDENT','DELETE_INCIDENT','ASSIGN_INCIDENT','RESOLVE_INCIDENT','CREATE_USER','UPDATE_USER','DELETE_USER','UPDATE_SETTINGS')),
@@ -90,7 +90,7 @@ CREATE TABLE activity_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE settings (
+CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     setting_key TEXT UNIQUE NOT NULL,
     setting_value TEXT NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO settings (setting_key, setting_value, setting_type) VALUES
+INSERT OR IGNORE INTO settings (setting_key, setting_value, setting_type) VALUES
 ('correlation_threshold','0.65','float'),
 ('correlation_time_window_hours','48','integer'),
 ('similarity_threshold','0.50','float'),
@@ -111,7 +111,7 @@ INSERT INTO settings (setting_key, setting_value, setting_type) VALUES
 ('organization_name','CyberIR','string'),
 ('incident_id_prefix','INC-','string');
 
-CREATE TABLE knowledge_base (
+CREATE TABLE IF NOT EXISTS knowledge_base (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     incident_type TEXT,
@@ -125,7 +125,7 @@ CREATE TABLE knowledge_base (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_preferences (
+CREATE TABLE IF NOT EXISTS user_preferences (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER UNIQUE NOT NULL REFERENCES users(id),
     email_notifications BOOLEAN DEFAULT 1,
@@ -139,13 +139,13 @@ CREATE TABLE user_preferences (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_incidents_status ON incidents(status);
-CREATE INDEX idx_incidents_priority ON incidents(priority);
-CREATE INDEX idx_incidents_cluster ON incidents(cluster_id);
-CREATE INDEX idx_incidents_assigned ON incidents(assigned_to);
-CREATE INDEX idx_incidents_reported_date ON incidents(reported_date);
-CREATE INDEX idx_incidents_type ON incidents(incident_type);
-CREATE INDEX idx_alerts_recipient ON alerts(recipient_id);
-CREATE INDEX idx_alerts_unread ON alerts(is_read);
-CREATE INDEX idx_activity_user ON activity_logs(user_id);
-CREATE INDEX idx_activity_date ON activity_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
+CREATE INDEX IF NOT EXISTS idx_incidents_priority ON incidents(priority);
+CREATE INDEX IF NOT EXISTS idx_incidents_cluster ON incidents(cluster_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_assigned ON incidents(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_incidents_reported_date ON incidents(reported_date);
+CREATE INDEX IF NOT EXISTS idx_incidents_type ON incidents(incident_type);
+CREATE INDEX IF NOT EXISTS idx_alerts_recipient ON alerts(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_unread ON alerts(is_read);
+CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_date ON activity_logs(created_at);

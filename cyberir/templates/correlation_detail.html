@@ -13,16 +13,16 @@
   <span class="breadcrumb-sep">›</span>
   <span>{{ cluster.cluster_id }}</span>
 </nav>
-<div style="display: grid; grid-template-columns: 65fr 35fr; gap: 20px; align-items: start;">
+<div class="cluster-detail-grid">
     
-    <div class="left-col">
+    <div class="cluster-detail-left">
         <!-- Card 1 -->
         <div class="card">
             <div class="cluster-id-text" style="font-size: 1.2rem; font-weight:800; color:var(--text-secondary);">{{ cluster.cluster_id }}</div>
             <h2 style="font-size: 1.8rem; margin: 4px 0 16px 0; color: var(--text-primary);">{{ cluster.cluster_name }}</h2>
             
             <div style="display:flex; gap:10px; margin-bottom: 20px;">
-                <span class="badge priority-{{ cluster.severity|lower }}">{{ cluster.severity }} Cluster</span>
+                <span class="badge priority-{{ (cluster.severity or 'Medium')|lower }}">{{ cluster.severity or 'Medium' }} Cluster</span>
                 <span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}">{{ cluster.status }}</span>
                 <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">{{ cluster.primary_type }} Primary</span>
             </div>
@@ -30,7 +30,7 @@
             <div style="font-size: 0.9rem; color: var(--text-secondary); display:flex; flex-direction:column; gap:8px;">
                 <div>First detected: <span style="color:var(--text-primary); font-weight:500;">{{ cluster.first_detected[:19] }}</span></div>
                 <div>Last updated: <span class="time-ago" data-time="{{ cluster.last_updated }}" style="color:var(--text-primary); font-weight:500;"></span></div>
-                <div>Total incidents: <b style="color:var(--primary);">{{ cluster.incident_count }}</b></div>
+                <div>Total incidents: <b style="color:var(--primary);">{{ cluster.incident_count or 0 }}</b></div>
             </div>
         </div>
 
@@ -38,7 +38,7 @@
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 14px;">
                 <div class="card-section-title" style="border:none; padding:0; margin:0;">Incidents in Cluster</div>
-                <span class="badge" style="background:var(--primary); color:white; border-radius:20px; padding:2px 8px;">{{ cluster.incident_count }}</span>
+                <span class="badge" style="background:var(--primary); color:white; border-radius:20px; padding:2px 8px;">{{ cluster.incident_count or 0 }}</span>
             </div>
             
             <div style="overflow-x:auto;">
@@ -64,9 +64,9 @@
                             <td>{{ inc.incident_type }}</td>
                             <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
                             <td><span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span></td>
-                            <td style="font-weight:700;">{{ inc.risk_score }}</td>
+                            <td style="font-weight:700;">{{ inc.risk_score or 0 }}</td>
                             <td>{{ inc.reported_date[:10] }}</td>
-                            <td style="color:var(--primary); font-weight:700;">{{ (inc.correlation_score * 100)|round|int }}%</td>
+                            <td style="color:var(--primary); font-weight:700;">{{ ((inc.correlation_score or 0) * 100)|round(0)|int }}%</td>
                             <td>
                                 <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
                                     <a href="/incidents/{{ inc.incident_id }}" class="btn-primary" style="padding:4px 8px; text-decoration:none; font-size:0.75rem;">View</a>
@@ -126,7 +126,7 @@
     </div>
 
 
-    <div class="right-col">
+    <div class="cluster-detail-right">
         <a href="/correlation" style="color:var(--text-secondary); text-decoration:none; font-size:0.85rem; font-weight:600; display:inline-block; margin-bottom:12px;">← Back to All Clusters</a>
         
         <!-- Right Card 1 -->
@@ -134,11 +134,11 @@
             <div class="card-section-title">Cluster Details</div>
             <div class="detail-row"><span class="detail-label">Cluster ID</span><span class="detail-value" style="font-family:monospace; font-weight:bold;">{{ cluster.cluster_id }}</span></div>
             <div class="detail-row"><span class="detail-label">Primary Incident Type</span><span class="detail-value">{{ cluster.primary_type }}</span></div>
-            <div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value"><span class="badge priority-{{ cluster.severity|lower }}">{{ cluster.severity }}</span></span></div>
+            <div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value"><span class="badge priority-{{ (cluster.severity or 'Medium')|lower }}">{{ cluster.severity or 'Medium' }}</span></span></div>
             <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}">{{ cluster.status }}</span></span></div>
             <div class="detail-row"><span class="detail-label">First Detected</span><span class="detail-value">{{ cluster.first_detected[:10] }}</span></div>
             <div class="detail-row"><span class="detail-label">Last Updated</span><span class="detail-value time-ago" data-time="{{ cluster.last_updated }}"></span></div>
-            <div class="detail-row" style="border:none;"><span class="detail-label">Total Incidents</span><span class="detail-value" style="font-weight:700;">{{ cluster.incident_count }}</span></div>
+            <div class="detail-row" style="border:none;"><span class="detail-label">Total Incidents</span><span class="detail-value" style="font-weight:700;">{{ cluster.incident_count or 0 }}</span></div>
         </div>
 
         <!-- Right Card 2 -->

@@ -48,12 +48,45 @@ body { display: flex; margin: 0; font-family: 'Inter', system-ui, sans-serif; ba
 .alert-badge { background: #dc2626; color: white; border-radius: 50%; font-size: 0.7rem; padding: 1px 6px; margin-left: auto; }
 
 .user-section { padding: 16px; border-top: 1px solid #1e293b; margin-top: auto; }
-.avatar { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: white;
+  flex-shrink: 0;
+}
 
-.role-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; color: white; text-transform: uppercase; }
-.role-admin { background: var(--badge-critical); }
-.role-analyst { background: var(--info); }
-.role-viewer { background: #64748b; }
+.role-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.role-admin {
+  background: #dc2626;
+  color: white;
+}
+.role-analyst {
+  background: #2563eb;
+  color: white;
+}
+.role-viewer {
+  background: #475569;
+  color: white;
+}
 
 .subtle-link { text-decoration: none; font-size: 0.8rem; }
 .subtle-link:hover { text-decoration: underline; color: white; }
@@ -325,4 +358,150 @@ body { display: flex; margin: 0; font-family: 'Inter', system-ui, sans-serif; ba
   color: #334155;
   text-align: center;
   padding: 8px 20px 12px;
+}
+
+.sidebar-user-wrapper {
+  position: relative;
+  padding: 12px 8px;
+  border-top: 1px solid #1e293b;
+  margin-top: auto;
+}
+
+.sidebar-user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sidebar-user-trigger:hover {
+  background: #1e293b;
+}
+
+.profile-chevron {
+  margin-left: auto;
+  font-size: 0.6rem;
+  color: #64748b;
+  transition: transform 0.2s;
+}
+
+.profile-chevron.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 8px;
+  right: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+  z-index: 1000;
+  margin-bottom: 4px;
+}
+
+.profile-dropdown.open {
+  display: block;
+  animation: dropUp 0.2s ease;
+}
+
+@keyframes dropUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  margin-bottom: 4px;
+}
+
+.dropdown-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.dropdown-user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-email {
+  font-size: 0.72rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #334155;
+  margin: 4px 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #0f172a;
+  color: white;
+}
+
+.dropdown-item-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.dropdown-logout {
+  color: #f87171;
+}
+
+.dropdown-logout:hover {
+  background: #1f0a0a;
+  color: #fca5a5;
 }

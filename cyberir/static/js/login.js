@@ -1,45 +1,50 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const passwordInput = document.getElementById('password');
-    const togglePasswordBtn = document.getElementById('togglePassword');
-    const toggleIcon = document.getElementById('toggleIcon');
-    const loginForm = document.getElementById('loginForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const errorBox = document.getElementById('errorBox');
-    const emailInput = document.getElementById('email');
-
     // Show/hide password
-    if (togglePasswordBtn) {
-        togglePasswordBtn.addEventListener('click', () => {
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.textContent = '●';
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            // using text toggle or eye emoji
+            if (type === 'password') {
+                togglePassword.innerText = '▼';
             } else {
-                passwordInput.type = 'password';
-                toggleIcon.textContent = '▼';
+                togglePassword.innerText = '●';
             }
         });
     }
 
-    // Prevent double submission
-    if (loginForm) {
-        loginForm.addEventListener('submit', () => {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Signing in...';
-        });
+    // Auto-focus email field on load
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        emailInput.focus();
     }
 
     // Clear error message when user starts typing
-    const clearError = () => {
-        if (errorBox) {
-            errorBox.style.display = 'none';
-        }
-    };
+    const inputs = document.querySelectorAll('input');
+    const errorBox = document.querySelector('.error-box');
 
-    if (emailInput) {
-        emailInput.addEventListener('input', clearError);
-    }
-    
-    if (passwordInput) {
-        passwordInput.addEventListener('input', clearError);
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            if (errorBox) {
+                errorBox.style.display = 'none';
+            }
+        });
+    });
+
+    // Prevent double-click form submission
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            // Check if form is valid first before disabling
+            if (loginForm.checkValidity()) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Signing in...';
+            }
+        });
     }
 });

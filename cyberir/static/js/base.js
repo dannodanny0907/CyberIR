@@ -153,3 +153,23 @@ document.addEventListener('keydown', (e) => {
         }
     }
 })
+
+// Profile dropdown toggle
+const profileTrigger = document.getElementById('profileTrigger')
+const profileDropdown = document.getElementById('profileDropdown')
+const profileChevron = document.querySelector('.profile-chevron')
+
+profileTrigger?.addEventListener('click', function(e) {
+    e.stopPropagation()
+    const isOpen = profileDropdown.classList.contains('open')
+    
+    profileDropdown.classList.toggle('open')
+    profileChevron?.classList.toggle('open')
+})
+
+document.addEventListener('click', () => {
+    if (profileDropdown?.classList.contains('open')) {
+        profileDropdown.classList.remove('open')
+        profileChevron?.classList.remove('open')
+    }
+})
