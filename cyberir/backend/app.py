@@ -534,7 +534,7 @@ def remove_from_cluster(incident_id):
 # Auto-apply resolution notes from a historically similar incident
 def apply_solution(incident_id):
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         source_id = data.get('source_incident_id','')
         notes = data.get('resolution_notes','')
         conn = get_db_connection()
@@ -624,7 +624,7 @@ def correlation_detail(cluster_id):
 # Change the resolution status of an entire incident cluster
 def update_cluster_status(cluster_id):
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         new_status = data.get('new_status','')
         conn = get_db_connection()
         conn.execute("UPDATE incident_clusters SET status=?,last_updated=datetime('now') WHERE cluster_id=?",[new_status,cluster_id])
@@ -639,7 +639,7 @@ def update_cluster_status(cluster_id):
 # Assign an entire incident cluster to an analyst
 def assign_cluster(cluster_id):
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         assigned_to = data.get('assigned_to') or None
         conn = get_db_connection()
         conn.execute("UPDATE incident_clusters SET assigned_to=? WHERE cluster_id=?",[assigned_to,cluster_id])
@@ -658,7 +658,7 @@ def assign_cluster(cluster_id):
 # Append analyst notes to a correlation cluster
 def add_cluster_note(cluster_id):
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         note = data.get('note','').strip()
         if not note:
             return jsonify({'success':False,'message':'Note required'})
@@ -946,7 +946,7 @@ def save_algorithm_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         conn = get_db_connection()
         for key in ['correlation_threshold','correlation_time_window_hours','similarity_threshold','similarity_result_limit']:
             val = data.get(key)
@@ -964,7 +964,7 @@ def save_sla_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False})
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         conn = get_db_connection()
         for key in ['critical_sla_hours','high_sla_hours','medium_sla_hours','low_sla_hours']:
             val = data.get(key)
@@ -982,7 +982,7 @@ def save_system_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False})
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         conn = get_db_connection()
         for key in ['organization_name','incident_id_prefix']:
             val = data.get(key)
@@ -1213,7 +1213,7 @@ def profile():
 # Save changes to the logged-in user's personal details
 def update_profile():
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         full_name = data.get('full_name','').strip()
         phone = data.get('phone_number','')
         if not full_name:
@@ -1233,7 +1233,7 @@ def change_password():
     try:
         from werkzeug.security import (check_password_hash,
             generate_password_hash)
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         current_pwd = data.get('current_password','')
         new_pwd = data.get('new_password','')
         confirm_pwd = data.get('confirm_password','')
@@ -1259,7 +1259,7 @@ def change_password():
 # Save the logged-in user's notification preferences
 def update_preferences():
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         conn = get_db_connection()
         conn.execute(
             """INSERT INTO user_preferences 
@@ -1299,7 +1299,7 @@ def update_preferences():
 # Change the visual color of the user's avatar icon
 def update_avatar_color():
     try:
-        data = request.get_json() or request.form
+        data = request.get_json(silent=True) or request.form
         color = data.get('avatar_color','#2563eb')
         conn = get_db_connection()
         try:
