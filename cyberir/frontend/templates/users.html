@@ -35,9 +35,6 @@
                 <td>{{ loop.index }}</td>
                 <td>
                     <div class="flex align-center">
-                        {% set name_parts = u.full_name.split() if u.full_name else [] %}
-                        {% set initials = (name_parts[0][0] ~ (name_parts[-1][0] if name_parts|length > 1 else '')) if name_parts else '?' %}
-                        <div class="avatar">{{ initials|upper }}</div>
                         <div>
                             <div class="user-name">{{ u.full_name }}</div>
                             <div class="user-email">{{ u.email }}</div>
