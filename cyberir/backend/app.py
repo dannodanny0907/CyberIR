@@ -1,12 +1,23 @@
+import os
+import sys
+
+# Allow running from other context properly
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 from flask import (Flask, render_template,
     redirect, url_for, flash, request, jsonify)
 from flask_login import (login_required, current_user)
 from auth import auth, login_manager
 from database import (get_db_connection, init_db,
     create_default_admin)
-import os
 
-app = Flask(__name__)
+ROOT = os.path.dirname(BACKEND_DIR)
+
+app = Flask(__name__,
+    template_folder=os.path.join(ROOT, 'frontend', 'templates'),
+    static_folder=os.path.join(ROOT, 'frontend', 'static'))
 app.secret_key = 'cyberir-secret-key-2026'
 
 login_manager.init_app(app)
@@ -633,7 +644,17 @@ def similarity():
             ORDER BY i.similarity_score DESC, i.reported_date DESC
         """).fetchall()
         # convert to dicts so templates can access by name
-        incidents_list = [dict(r) for r in rows]
+        incidents_list = []
+        for r in rows:
+            d = dict(r)
+            d['similarity_score'] = float(d.get('similarity_score') or 0.0)
+            d['priority'] = d.get('priority') or 'Low'
+            d['status'] = d.get('status') or 'Open'
+            d['similar_status'] = d.get('similar_status') or 'Unknown'
+            d['title'] = d.get('title') or 'Untitled'
+            d['similar_to_title'] = d.get('similar_to_title') or 'Unknown Incident'
+            d['similar_resolution'] = d.get('similar_resolution') or ''
+            incidents_list.append(d)
         total_with_similarity = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c']
         high_confidence = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75").fetchone()['c']
         solution_applied = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c']
@@ -983,47 +1004,72 @@ def add_user():
         return jsonify({'success':False,'message':'Admin only'})
     try:
         from werkzeug.security import generate_password_hash
-        full_name = request.form.get('full_name','').strip()
-        email = request.form.get('email','').strip()
-        role = request.form.get('role','Analyst')
-        password = request.form.get('password','')
-        phone = request.form.get('phone_number','')
-        has_priv = 1 if request.form.get('has_admin_privileges') else 0
+        # Accept both JSON (from fetch) and form data
+        data = request.get_json(silent=True) or request.form
+        full_name = (data.get('full_name') or '').strip()
+        email = (data.get('email') or '').strip()
+        role = data.get('role') or 'Analyst'
+        password = data.get('password') or ''
+        phone = data.get('phone_number') or ''
+        has_priv = 1 if data.get('has_admin_privileges') in (True, 'true', 'True', '1', 1) else 0
+        if not full_name:
+            return jsonify({'success':False,'message':'Full name is required'})
+        if not email:
+            return jsonify({'success':False,'message':'Email is required'})
+        if len(password) < 8:
+            return jsonify({'success':False,'message':'Password must be at least 8 characters'})
         conn = get_db_connection()
         if conn.execute("SELECT id FROM users WHERE email=?",[email]).fetchone():
             conn.close()
             return jsonify({'success':False,'message':'Email already exists'})
-        cursor = conn.execute("INSERT INTO users (full_name,email,password_hash,role,has_admin_privileges,phone_number,is_active,created_by) VALUES (?,?,?,?,?,?,1,?)",(full_name,email,generate_password_hash(password),role,has_priv,phone,current_user.id))
+        cursor = conn.execute(
+            "INSERT INTO users (full_name,email,password_hash,role,has_admin_privileges,phone_number,is_active,created_by) VALUES (?,?,?,?,?,?,1,?)",
+            (full_name,email,generate_password_hash(password),role,has_priv,phone,current_user.id))
         new_id = cursor.lastrowid
         conn.execute("INSERT OR IGNORE INTO user_preferences (user_id) VALUES (?)",[new_id])
         conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'CREATE_USER','user',?)",[current_user.id,new_id])
         conn.commit(); conn.close()
-        return jsonify({'success':True,'message':'User created'})
+        return jsonify({'success':True,'message':'User created successfully'})
     except Exception as e:
+        import traceback; traceback.print_exc()
         return jsonify({'success':False,'message':str(e)})
 
 @app.route('/users/edit/<int:user_id>', methods=['POST'])
 @login_required
 def edit_user(user_id):
     if current_user.role != 'Admin':
-        return jsonify({'success':False})
+        return jsonify({'success':False,'message':'Admin only'})
     try:
         from werkzeug.security import generate_password_hash
-        full_name = request.form.get('full_name','').strip()
-        email = request.form.get('email','').strip()
-        phone = request.form.get('phone_number','')
-        role = request.form.get('role','Analyst')
-        has_priv = 1 if request.form.get('has_admin_privileges') else 0
-        password = request.form.get('password','')
+        # Accept both JSON (from fetch) and form data
+        data = request.get_json(silent=True) or request.form
+        full_name = (data.get('full_name') or '').strip()
+        email = (data.get('email') or '').strip()
+        phone = data.get('phone_number') or ''
+        role = data.get('role') or 'Analyst'
+        has_priv = 1 if data.get('has_admin_privileges') in (True, 'true', 'True', '1', 1) else 0
+        password = data.get('password') or ''
+        if not full_name:
+            return jsonify({'success':False,'message':'Full name is required'})
         conn = get_db_connection()
-        if password:
-            conn.execute("UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=?,password_hash=? WHERE id=?",[full_name,email,phone,role,has_priv,generate_password_hash(password),user_id])
+        # Protect admin email from being changed
+        if user_id == 1:
+            conn.execute(
+                "UPDATE users SET full_name=?,phone_number=?,has_admin_privileges=? WHERE id=?",
+                [full_name,phone,has_priv,user_id])
+        elif password:
+            conn.execute(
+                "UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=?,password_hash=? WHERE id=?",
+                [full_name,email,phone,role,has_priv,generate_password_hash(password),user_id])
         else:
-            conn.execute("UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=? WHERE id=?",[full_name,email,phone,role,has_priv,user_id])
+            conn.execute(
+                "UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=? WHERE id=?",
+                [full_name,email,phone,role,has_priv,user_id])
         conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'UPDATE_USER','user',?)",[current_user.id,user_id])
         conn.commit(); conn.close()
-        return jsonify({'success':True})
+        return jsonify({'success':True,'message':'User updated successfully'})
     except Exception as e:
+        import traceback; traceback.print_exc()
         return jsonify({'success':False,'message':str(e)})
 
 @app.route('/users/toggle-status/<int:user_id>', methods=['POST'])
@@ -1273,14 +1319,4 @@ def server_error(e):
         return jsonify({'error':'Internal server error','code':500}),500
     return render_template('errors/500.html'),500
 
-# ─── STARTUP ───────────────────────────────────
-
-if __name__ == '__main__':
-    init_db()
-    create_default_admin()
-    print("="*50)
-    print("Starting CyberIR...")
-    print("URL: http://localhost:5000")
-    print("Admin: admin@cyberir.com / Admin@1234")
-    print("="*50)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+# ─── END OF APP ───────────────────────────────────

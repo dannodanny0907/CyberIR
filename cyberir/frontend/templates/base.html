@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CyberIR{% endblock %} — CyberIR</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+  <div class="sidebar">
+    <div class="logo-area">
+      🛡️ <span class="logo-text">CyberIR</span>
+      <div class="subtitle">Incident Management</div>
+    </div>
+
+    <nav class="nav-links">
+      <div class="nav-section-label">Main</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">
+        <span class="icon">🏠</span> Dashboard
+      </a>
+      <a href="/incidents" class="{{ 'active' if active_page == 'incidents' else '' }}">
+        <span class="icon">📋</span> Incidents
+      </a>
+      <a href="/correlation" class="{{ 'active' if active_page == 'correlation' else '' }}">
+        <span class="icon">🔗</span> Correlation
+      </a>
+      <a href="/similarity" class="{{ 'active' if active_page == 'similarity' else '' }}">
+        <span class="icon">🔍</span> Similarity
+      </a>
+      <div class="nav-section-label">Management</div>
+      <a href="/alerts" class="{{ 'active' if active_page == 'alerts' else '' }}">
+        <span class="icon">🔔</span> Alerts
+        {% if unread_alerts_count > 0 %}
+        <span class="alert-badge" id="sidebarAlertBadge">{{ unread_alerts_count }}</span>
+        {% else %}
+        <span class="alert-badge" id="sidebarAlertBadge" style="display:none">0</span>
+        {% endif %}
+      </a>
+
+      {% if current_user.has_admin_privileges or current_user.role == 'Admin' %}
+      <a href="/reports" class="{{ 'active' if active_page == 'reports' else '' }}">
+        <span class="icon">📊</span> Reports
+      </a>
+      {% endif %}
+
+      {% if current_user.role == 'Admin' %}
+      <a href="/settings" class="{{ 'active' if active_page == 'settings' else '' }}">
+        <span class="icon">⚙️</span> Settings
+      </a>
+      <a href="/users" class="{{ 'active' if active_page == 'users' else '' }}">
+        <span class="icon">👥</span> Users
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-user-wrapper">
+
+      <!-- Clickable profile trigger -->
+      <div class="sidebar-user-trigger" id="profileTrigger">
+
+        <div class="avatar-circle" id="sidebarAvatar" style="background: {{ current_user.avatar_color 
+                if current_user.avatar_color 
+                else '#2563eb' }}">
+          {{ current_user.full_name[0].upper() }}
+          {%- if current_user.full_name.split()|length > 1 -%}
+          {{ current_user.full_name.split()[-1][0].upper() }}
+          {%- endif %}
+        </div>
+
+        <div class="sidebar-user-info" style="display:flex; flex-direction:column; min-width:0;">
+          <div class="sidebar-user-name" id="sidebarUserName"
+            style="font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ current_user.full_name }}
+          </div>
+          <span class="role-badge role-{{ current_user.role.lower() }}" style="margin-top:2px;">
+            {{ current_user.role }}
+          </span>
+        </div>
+
+        <span class="profile-chevron">▲</span>
+
+      </div>
+
+      <!-- Dropdown popup menu -->
+      <div class="profile-dropdown" id="profileDropdown">
+
+        <!-- User info header -->
+        <div class="dropdown-header">
+          <div class="dropdown-avatar" style="background: {{ current_user.avatar_color 
+                  if current_user.avatar_color 
+                  else '#2563eb' }}">
+            {{ current_user.full_name[0].upper() }}
+            {%- if current_user.full_name.split()|length > 1 -%}
+            {{ current_user.full_name.split()[-1][0].upper() }}
+            {%- endif %}
+          </div>
+          <div class="dropdown-user-details">
+            <div class="dropdown-name">
+              {{ current_user.full_name }}
+            </div>
+            <div class="dropdown-email">
+              {{ current_user.email }}
+            </div>
+          </div>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <!-- Menu items -->
+        <a href="/profile" class="dropdown-item">
+          <span class="dropdown-item-icon">👤</span>
+          <span>My Profile</span>
+        </a>
+
+        <a href="/profile" class="dropdown-item">
+          <span class="dropdown-item-icon">🔔</span>
+          <span>Notification Preferences</span>
+        </a>
+
+        <a href="/profile" class="dropdown-item">
+          <span class="dropdown-item-icon">🔒</span>
+          <span>Change Password</span>
+        </a>
+
+        {% if current_user.role == 'Admin' %}
+        <a href="/settings" class="dropdown-item">
+          <span class="dropdown-item-icon">⚙️</span>
+          <span>System Settings</span>
+        </a>
+        {% endif %}
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/logout" class="dropdown-item dropdown-logout">
+          <span class="dropdown-item-icon">🚪</span>
+          <span>Log Out</span>
+        </a>
+
+      </div>
+
+    </div>
+    <div class="sidebar-version">
+      {{ app_name }} v{{ app_version }}
+    </div>
+  </div>
+
+  <div class="main-wrapper">
+    <header class="top-header">
+      <div style="display:flex; align-items:center;">
+        <button class="mobile-menu-btn" id="mobileMenuBtn"
+          style="display:none;background:none;border:none;font-size:1.4rem;cursor:pointer;padding:4px 8px;margin-right:10px;">☰</button>
+        <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+      </div>
+      <div class="header-right flex gap-3 align-center">
+        <div class="datetime" id="liveClock"></div>
+        <a href="/alerts" class="notification-icon">🔔</a>
+      </div>
+    </header>
+
+    <main class="content-area">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+          <span class="flash-icon">
+            {% if category == 'error' %}❌
+            {% elif category == 'success' %}✅
+            {% elif category == 'info' %}ℹ️
+            {% elif category == 'warning' %}⚠️
+            {% else %}📢{% endif %}
+          </span>
+          <span class="flash-text">{{ message }}</span>
+          <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+
+  <div id="globalConfirmModal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;padding:28px;width:420px;max-width:90vw;text-align:center">
+      <div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>
+      <p id="confirmMessage" style="font-size:0.95rem;margin:12px 0 20px;color:#1e293b"></p>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="document.getElementById('globalConfirmModal').style.display='none'" class="btn-secondary"
+          style="padding:9px 20px; border-radius:6px; cursor:pointer;">Cancel</button>
+        <button id="confirmActionBtn"
+          style="background:#dc2626;color:white;border:none;padding:9px 20px;border-radius:6px;cursor:pointer;font-weight:600">Confirm</button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

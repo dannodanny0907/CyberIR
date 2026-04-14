@@ -33,7 +33,7 @@
         ⚠️ Editing {{ incident.incident_id }}: {{ incident.title }}
     </div>
 
-    <form id="logIncidentForm" action="/incidents/edit/{{ incident.incident_id }}" method="POST">
+    <form id="logIncidentForm" action="/incidents/{{ incident.incident_id }}/edit" method="POST">
         <!-- Section 1 -->
         <div class="card">
             <div class="section-header">
