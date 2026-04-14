@@ -337,14 +337,44 @@ def incident_detail(incident_id):
             "SELECT al.*, u.full_name FROM activity_logs al JOIN users u ON al.user_id=u.id WHERE al.target_id=? AND al.target_type='incident' ORDER BY al.created_at DESC",
             [incident['id']]).fetchall()
         analysts = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
+        incident_data = incident
+        
+        # Make sure these fields are present and not being lost
+        print("cluster_id:", incident_data.get('cluster_id'))
+        print("similar_incident_id:", incident_data.get('similar_incident_id'))
+        print("similarity_score:", incident_data.get('similarity_score'))
+
         cluster = None
-        if incident.get('cluster_id'):
-            cluster = conn.execute("SELECT * FROM incident_clusters WHERE cluster_id=?",[incident['cluster_id']]).fetchone()
+        if incident_data.get('cluster_id'):
+            cluster = conn.execute(
+                '''SELECT * FROM incident_clusters 
+                   WHERE cluster_id = ?''',
+                [incident_data['cluster_id']]).fetchone()
+            if cluster:
+                cluster = dict(cluster)
+
+        similar_incident = None
+        if incident_data.get('similar_incident_id'):
+            similar_incident = conn.execute(
+                '''SELECT incident_id, title, 
+                   incident_type, status
+                   FROM incidents 
+                   WHERE incident_id = ?''',
+                [incident_data['similar_incident_id']]
+            ).fetchone()
+            if similar_incident:
+                similar_incident = dict(similar_incident)
+
         conn.close()
-        return render_template('incident_detail.html',
-            incident=incident, activity=activity,
-            analysts=analysts, cluster=cluster,
-            active_page='incidents')
+        return render_template(
+            'incident_detail.html',
+            incident=incident_data,
+            cluster=cluster,
+            similar_incident=similar_incident,
+            activity=activity,
+            analysts=analysts,
+            active_page='incidents'
+        )
     except Exception as e:
         import traceback; traceback.print_exc()
         flash('Error loading incident.','error')

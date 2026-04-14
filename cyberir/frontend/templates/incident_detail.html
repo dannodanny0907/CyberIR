@@ -181,12 +181,64 @@
             
             <div style="margin-top:16px; padding-top:16px; border-top:1px solid #f8fafc;">
                 <div class="detail-row">
-                    <span class="detail-label">Cluster ID</span>
-                    <span class="detail-value" style="color:#94a3b8; font-style:italic;">Not correlated</span>
+                  <span class="detail-label">Cluster ID</span>
+                  <span class="detail-value">
+                    {% if incident.cluster_id %}
+                      <a href="/correlation/{{ incident.cluster_id }}"
+                         style="color: #7c3aed; 
+                                font-family: monospace;
+                                font-weight: 700;
+                                text-decoration: none;">
+                        {{ incident.cluster_id }}
+                      </a>
+                      {% if cluster %}
+                        <br>
+                        <small style="color: #64748b; 
+                                      font-size: 0.75rem;">
+                          {{ cluster.cluster_name or '' }}
+                        </small>
+                      {% endif %}
+                    {% else %}
+                      <span style="color: #64748b; 
+                                   font-style: italic;">
+                        Not correlated
+                      </span>
+                    {% endif %}
+                  </span>
                 </div>
                 <div class="detail-row" style="border:none;">
-                    <span class="detail-label">Similar Incident</span>
-                    <span class="detail-value" style="color:#94a3b8; font-style:italic;">No similar incidents found</span>
+                  <span class="detail-label">Similarity</span>
+                  <span class="detail-value">
+                    {% if incident.similar_incident_id %}
+                      <a href="/incidents/{{ incident.similar_incident_id }}"
+                         style="color: #2563eb;
+                                font-family: monospace;
+                                font-weight: 700;
+                                text-decoration: none;">
+                        {{ incident.similar_incident_id }}
+                      </a>
+                      {% if incident.similarity_score %}
+                        <br>
+                        <small style="color: #16a34a;
+                                      font-size: 0.75rem;
+                                      font-weight: 600;">
+                          {{ ((incident.similarity_score or 0) * 100) | round(0) | int }}% match
+                        </small>
+                      {% endif %}
+                      {% if similar_incident %}
+                        <br>
+                        <small style="color: #64748b;
+                                      font-size: 0.72rem;">
+                          {{ similar_incident.title[:40] }}...
+                        </small>
+                      {% endif %}
+                    {% else %}
+                      <span style="color: #64748b;
+                                   font-style: italic;">
+                        No match found
+                      </span>
+                    {% endif %}
+                  </span>
                 </div>
             </div>
         </div>
@@ -275,39 +327,75 @@
         <!-- Right Card 5 -->
         <div class="card">
             <div class="card-section-title">Incident Cluster</div>
-            {% if incident.cluster_id %}
-                <div style="font-size:0.9rem; margin-bottom:8px;">
-                    This incident is part of cluster <strong><a href="/correlation/{{ incident.cluster_id }}" class="incident-id-link">{{ incident.cluster_id }}</a></strong>
-                </div>
-                <div style="font-weight:700; margin-bottom:8px;">{{ incident.cluster_id }} Grouping</div>
-                <div style="display:flex; gap:6px; margin-bottom: 12px; font-size:0.8rem;">
-                    <span class="badge" style="background:#f1f5f9; color:#475569;">Correlation Match</span>
-                    <span class="badge" style="background:#eff6ff; color:#2563eb;">{{ ((incident.correlation_score or 0) * 100)|round|int }}% Confidence</span>
-                </div>
-                
-                {% if other_incidents_in_cluster %}
-                <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">Other incidents in this cluster:</div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        {% for o_inc in other_incidents_in_cluster[:3] %}
-                        <a href="/incidents/{{ o_inc.incident_id }}" class="badge" style="background: #f8fafc; color: var(--primary); border: 1px solid #e2e8f0; text-decoration: none;">{{ o_inc.incident_id }}</a>
-                        {% endfor %}
-                        {% if other_incidents_in_cluster|length > 3 %}
-                        <a href="/correlation/{{ incident.cluster_id }}" class="badge" style="background: white; color: var(--text-secondary); border: 1px dashed #cbd5e1; text-decoration: none;">+{{ other_incidents_in_cluster|length - 3 }} more</a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-                
-                <a href="/correlation/{{ incident.cluster_id }}" class="btn-primary" style="text-decoration:none; display:inline-block; width:100%; text-align:center; padding:8px 0; margin-top:16px;">View Cluster Details →</a>
-            {% else %}
-                <div style="font-weight:600; font-size:0.95rem; margin-bottom:6px;">Not part of any cluster</div>
-                <div style="color:#94a3b8; font-style:italic; font-size:0.875rem;">This incident has not been correlated with any other incidents.</div>
-                
-                <div style="color:#64748b; font-size:0.75rem; margin-top:12px; padding-top:12px; border-top:1px solid #f1f5f9;">
-                    Correlation is checked automatically when incidents are logged. Related incidents within 48 hours are grouped together.
-                </div>
-            {% endif %}
+{% if incident.cluster_id and cluster %}
+  <div style="margin-bottom: 12px;">
+    <div style="font-family: monospace;
+                font-size: 1rem;
+                font-weight: 700;
+                color: #7c3aed;">
+      {{ incident.cluster_id }}
+    </div>
+    <div style="font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin-top: 4px;">
+      {{ cluster.cluster_name or '' }}
+    </div>
+  </div>
+  
+  <div class="detail-row">
+    <span class="detail-label">Severity</span>
+    <span class="detail-value">
+      <span class="badge-{{ (cluster.severity or 'medium') | lower }}">
+        {{ cluster.severity or 'Medium' }}
+      </span>
+    </span>
+  </div>
+  
+  <div class="detail-row">
+    <span class="detail-label">Status</span>
+    <span class="detail-value">
+      {{ cluster.status or 'Active' }}
+    </span>
+  </div>
+  
+  <div class="detail-row">
+    <span class="detail-label">
+      Incidents in cluster
+    </span>
+    <span class="detail-value">
+      {{ cluster.incident_count or 0 }}
+    </span>
+  </div>
+  
+  <a href="/correlation/{{ incident.cluster_id }}"
+     class="btn-primary"
+     style="display: block;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 12px;
+            padding: 8px;">
+    View Cluster Details →
+  </a>
+
+{% else %}
+  <div style="text-align: center;
+              padding: 20px;
+              color: #64748b;">
+    <div style="font-size: 2rem;
+                margin-bottom: 8px;">🔗</div>
+    <div style="font-size: 0.875rem;
+                font-style: italic;">
+      Not part of any cluster
+    </div>
+    <div style="font-size: 0.78rem;
+                margin-top: 4px;
+                color: #94a3b8;">
+      Correlation is checked automatically
+      when incidents are logged.
+    </div>
+  </div>
+{% endif %}
         </div>
     </div>
     </div>
