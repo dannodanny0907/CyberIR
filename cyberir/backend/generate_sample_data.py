@@ -1,3 +1,4 @@
+# File: generate_sample_data.py - Script to populate the database with mock cybersecurity incidents
 import os
 import sys
 
@@ -259,6 +260,7 @@ INCIDENT_TEMPLATES = [
   }
 ]
 
+# Handle logic for generate_users
 def generate_users(conn, admin_id):
   print("Creating sample users...")
   user_ids = [admin_id]
@@ -289,6 +291,7 @@ def generate_users(conn, admin_id):
   conn.commit()
   return user_ids
 
+# Handle logic for generate_incidents
 def generate_incidents(conn, user_ids, admin_id):
   print("Generating sample incidents...")
   
@@ -430,6 +433,7 @@ def generate_incidents(conn, user_ids, admin_id):
   print(f"  Created {len(scenarios)} incidents")
   return incident_ids_db
 
+# Handle logic for run_algorithms_on_all
 def run_algorithms_on_all(incident_ids_db):
   print("Running algorithms on all incidents...")
   
@@ -457,6 +461,7 @@ def run_algorithms_on_all(incident_ids_db):
   print(f"  Correlation: {clusters_created} incidents clustered")
   print(f"  Similarity: {matches_found} matches found")
 
+# Handle logic for generate_activity_logs
 def generate_activity_logs(conn, user_ids, admin_id):
   print("Generating activity logs...")
   
@@ -484,6 +489,7 @@ def generate_activity_logs(conn, user_ids, admin_id):
   conn.commit()
   print("  Activity logs generated")
 
+# Handle logic for main
 def main():
   with app.app_context():
     print("=" * 50)

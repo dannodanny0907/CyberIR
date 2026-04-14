@@ -1,13 +1,16 @@
+# File: similarity_engine.py - Engine to find similar past incidents and historical solutions
 from database import get_db_connection
 from difflib import SequenceMatcher
 import re
 
+# Handle logic for clean_text
 def clean_text(text):
     if not text:
         return ""
     cleaned = re.sub(r'[^a-z0-9\s]', ' ', text.lower())
     return ' '.join(cleaned.split())
 
+# Handle logic for get_keywords
 def get_keywords(text):
     cleaned = clean_text(text)
     if not cleaned:
@@ -27,6 +30,7 @@ def get_keywords(text):
     words = cleaned.split()
     return set([w for w in words if w not in stop_words and len(w) >= 3])
 
+# Handle logic for calculate_text_similarity
 def calculate_text_similarity(text_a, text_b):
     kw_a = get_keywords(text_a)
     kw_b = get_keywords(text_b)
@@ -38,6 +42,7 @@ def calculate_text_similarity(text_a, text_b):
     seq_sim = SequenceMatcher(None, clean_text(text_a), clean_text(text_b)).ratio()
     return round((jaccard * 0.6) + (seq_sim * 0.4), 4)
 
+# Handle logic for calculate_asset_similarity
 def calculate_asset_similarity(asset_a, asset_b):
     if not asset_a or not asset_b:
         return 0.0
@@ -50,6 +55,7 @@ def calculate_asset_similarity(asset_a, asset_b):
         overlap = 0.0
     return round((direct * 0.7) + (overlap * 0.3), 4)
 
+# Handle logic for calculate_similarity_score
 def calculate_similarity_score(new_incident, historical_incident):
     system_score = calculate_asset_similarity(
         new_incident.get('affected_asset'), historical_incident.get('affected_asset'))
@@ -66,6 +72,7 @@ def calculate_similarity_score(new_incident, historical_incident):
     )
     return round(final_score, 4)
 
+# Handle logic for explain_similarity
 def explain_similarity(new_incident, historical_incident, score):
     explanations = []
     if new_incident.get('incident_type') == historical_incident.get('incident_type'):
@@ -97,6 +104,7 @@ def explain_similarity(new_incident, historical_incident, score):
         
     return explanations
 
+# Handle logic for run_similarity
 def run_similarity(new_incident_id):
     conn = get_db_connection()
     try:
@@ -193,6 +201,7 @@ def run_similarity(new_incident_id):
         print(f"Similarity error: {e}")
         return {"found": False, "matches": [], "suggestion": None, "error": str(e)}
 
+# Handle logic for get_cached_similarity
 def get_cached_similarity(incident_id_str):
     conn = get_db_connection()
     inc = conn.execute('SELECT id, similar_incident_id, similarity_score, reported_date FROM incidents WHERE incident_id = ?', (incident_id_str,)).fetchone()

@@ -1,3 +1,4 @@
+/* File: log_incident.js - Form validation and risk calculation logic */
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initial datetime
     const dateInput = document.getElementById('reported_date');

@@ -1,3 +1,4 @@
+/* File: users.js - Admin controls for managing user states and creation */
 document.addEventListener('DOMContentLoaded', () => {
     const modalOverlay = document.getElementById('userModalOverlay');
     const deleteModalOverlay = document.getElementById('deleteModalOverlay');

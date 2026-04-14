@@ -1,3 +1,4 @@
+/* File: correlation.js - Interactive elements for the correlation dashboard */
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Format Time Ago globally

@@ -1,3 +1,4 @@
+/* File: base.js - Global client-side interactions, navigation, and state */
 document.addEventListener('DOMContentLoaded', () => {
     // Live clock
     const clockElement = document.getElementById('liveClock');

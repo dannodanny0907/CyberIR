@@ -1,3 +1,4 @@
+/* File: incident_detail.js - Logic for incident actions, resolution, and similarities */
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Assign Incident
     const showAssignBtn = document.getElementById('showAssignBtn');

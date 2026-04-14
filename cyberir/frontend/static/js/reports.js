@@ -1,3 +1,4 @@
+/* File: reports.js - Logic for generating and downloading reports */
 document.addEventListener('DOMContentLoaded', () => {
     // Animate performance and stat bars
     setTimeout(() => {

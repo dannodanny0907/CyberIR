@@ -1,3 +1,4 @@
+/* File: profile.js - User profile update and form handling logic */
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Avatar color swatches

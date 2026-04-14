@@ -1,3 +1,4 @@
+/* File: users.css - Styles for the user management admin page */
 .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .heading-group { display: flex; align-items: center; }
 .heading-group h2 { margin: 0; color: var(--text-primary); font-size: 1.5rem; }

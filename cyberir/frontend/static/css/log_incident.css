@@ -1,3 +1,4 @@
+/* File: log_incident.css - Styles for incident entry forms */
 .log-incident-container { max-width: 800px; margin: 0 auto; }
 .card { margin-bottom: 20px; }
 .section-header { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }

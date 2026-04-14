@@ -1,3 +1,4 @@
+# File: app.py - Main Flask application routing and core logic
 import os
 import sys
 
@@ -25,6 +26,7 @@ login_manager.login_view = 'auth.login'
 app.register_blueprint(auth)
 
 @app.context_processor
+# Inject common variables like unread alert count into all templates
 def inject_globals():
     try:
         if current_user.is_authenticated:
@@ -62,12 +64,14 @@ def inject_globals():
 # ─── REDIRECT ROUTES ───────────────────────────
 
 @app.route('/')
+# Redirect root URL to the dashboard or login page
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     return redirect(url_for('auth.login'))
 
 @app.route('/login')
+# Handle user authentication and session creation
 def login_page():
     return redirect(url_for('auth.login'))
 
@@ -75,6 +79,7 @@ def login_page():
 
 @app.route('/dashboard')
 @login_required
+# Render main dashboard with summary statistics and charts
 def dashboard():
     try:
         conn = get_db_connection()
@@ -187,6 +192,7 @@ def dashboard():
 
 @app.route('/incidents')
 @login_required
+# Display paginated list of all incidents with optional filters
 def incidents():
     try:
         conn = get_db_connection()
@@ -256,6 +262,7 @@ def incidents():
 
 @app.route('/incidents/log', methods=['GET','POST'])
 @login_required
+# Process new incident ticket submissions
 def log_incident():
     if current_user.role == 'Viewer':
         flash('No permission to log incidents.','error')
@@ -311,6 +318,7 @@ def log_incident():
 
 @app.route('/incidents/<incident_id>')
 @login_required
+# Retrieve and display comprehensive details for a specific incident
 def incident_detail(incident_id):
     try:
         conn = get_db_connection()
@@ -344,6 +352,7 @@ def incident_detail(incident_id):
 
 @app.route('/incidents/<incident_id>/edit', methods=['GET','POST'])
 @login_required
+# Update existing incident details in the database
 def edit_incident(incident_id):
     if current_user.role == 'Viewer':
         flash('No permission to edit incidents.','error')
@@ -394,6 +403,7 @@ def edit_incident(incident_id):
 
 @app.route('/incidents/assign/<incident_id>', methods=['POST'])
 @login_required
+# Assign or reassign an incident to a specific analyst
 def assign_incident(incident_id):
     try:
         conn = get_db_connection()
@@ -412,6 +422,7 @@ def assign_incident(incident_id):
 
 @app.route('/incidents/update-status/<incident_id>', methods=['POST'])
 @login_required
+# Progress the lifecycle status of an incident
 def update_incident_status(incident_id):
     try:
         conn = get_db_connection()
@@ -433,6 +444,7 @@ def update_incident_status(incident_id):
 
 @app.route('/incidents/resolve/<incident_id>', methods=['POST'])
 @login_required
+# Mark an incident as resolved and record mitigation notes
 def resolve_incident(incident_id):
     try:
         conn = get_db_connection()
@@ -453,6 +465,7 @@ def resolve_incident(incident_id):
 
 @app.route('/incidents/delete/<incident_id>', methods=['POST'])
 @login_required
+# Permanently remove an incident and its associated alerts
 def delete_incident(incident_id):
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
@@ -474,6 +487,7 @@ def delete_incident(incident_id):
 
 @app.route('/incidents/remove-from-cluster/<incident_id>', methods=['POST'])
 @login_required
+# Detach a specific incident from its correlation cluster
 def remove_from_cluster(incident_id):
     if current_user.role != 'Admin':
         return jsonify({'success':False})
@@ -487,6 +501,7 @@ def remove_from_cluster(incident_id):
 
 @app.route('/incidents/apply-solution/<incident_id>', methods=['POST'])
 @login_required
+# Auto-apply resolution notes from a historically similar incident
 def apply_solution(incident_id):
     try:
         data = request.get_json() or request.form
@@ -507,6 +522,7 @@ def apply_solution(incident_id):
 
 @app.route('/correlation')
 @login_required
+# List active incident correlation clusters
 def correlation():
     try:
         conn = get_db_connection()
@@ -535,6 +551,7 @@ def correlation():
 
 @app.route('/correlation/<cluster_id>')
 @login_required
+# Show incidents grouped within a specific correlation cluster
 def correlation_detail(cluster_id):
     try:
         conn = get_db_connection()
@@ -574,6 +591,7 @@ def correlation_detail(cluster_id):
 
 @app.route('/correlation/update-status/<cluster_id>', methods=['POST'])
 @login_required
+# Change the resolution status of an entire incident cluster
 def update_cluster_status(cluster_id):
     try:
         data = request.get_json() or request.form
@@ -588,6 +606,7 @@ def update_cluster_status(cluster_id):
 
 @app.route('/correlation/assign/<cluster_id>', methods=['POST'])
 @login_required
+# Assign an entire incident cluster to an analyst
 def assign_cluster(cluster_id):
     try:
         data = request.get_json() or request.form
@@ -606,6 +625,7 @@ def assign_cluster(cluster_id):
 
 @app.route('/correlation/add-note/<cluster_id>', methods=['POST'])
 @login_required
+# Append analyst notes to a correlation cluster
 def add_cluster_note(cluster_id):
     try:
         data = request.get_json() or request.form
@@ -629,6 +649,7 @@ def add_cluster_note(cluster_id):
 
 @app.route('/similarity')
 @login_required
+# Display instances of similar incidents across the database
 def similarity():
     try:
         conn = get_db_connection()
@@ -675,6 +696,7 @@ def similarity():
 
 @app.route('/api/similarity/<incident_id>')
 @login_required
+# Provide JSON payload of similar incidents for front-end rendering
 def api_similarity(incident_id):
     try:
         conn = get_db_connection()
@@ -692,6 +714,7 @@ def api_similarity(incident_id):
 
 @app.route('/alerts')
 @login_required
+# Render the alerts and notifications page
 def alerts():
     try:
         conn = get_db_connection()
@@ -721,6 +744,7 @@ def alerts():
 
 @app.route('/alerts/mark-read/<int:alert_id>', methods=['POST'])
 @login_required
+# Update a specific alert's status to read
 def mark_alert_read(alert_id):
     try:
         conn = get_db_connection()
@@ -731,6 +755,7 @@ def mark_alert_read(alert_id):
 
 @app.route('/alerts/mark-all-read', methods=['POST'])
 @login_required
+# Bulk update all user alerts to read status
 def mark_all_alerts_read():
     try:
         conn = get_db_connection()
@@ -741,6 +766,7 @@ def mark_all_alerts_read():
 
 @app.route('/alerts/dismiss/<int:alert_id>', methods=['POST'])
 @login_required
+# Hide a specific alert from the user's view
 def dismiss_alert(alert_id):
     try:
         conn = get_db_connection()
@@ -751,6 +777,7 @@ def dismiss_alert(alert_id):
 
 @app.route('/alerts/dismiss-all-read', methods=['POST'])
 @login_required
+# Hide all read alerts to clear the notification queue
 def dismiss_all_read_alerts():
     try:
         conn = get_db_connection()
@@ -763,6 +790,7 @@ def dismiss_all_read_alerts():
 
 @app.route('/reports')
 @login_required
+# Render the reporting interface for KPI generation
 def reports():
     if current_user.role != 'Admin' and not current_user.has_admin_privileges:
         flash('Access denied.','error')
@@ -805,6 +833,7 @@ def reports():
 
 @app.route('/reports/export/incidents')
 @login_required
+# Generate downloadable CSV export of incident data
 def export_incidents():
     import csv
     from io import StringIO
@@ -820,6 +849,7 @@ def export_incidents():
 
 @app.route('/reports/export/clusters')
 @login_required
+# Generate downloadable CSV export of cluster data
 def export_clusters():
     import csv
     from io import StringIO
@@ -835,6 +865,7 @@ def export_clusters():
 
 @app.route('/reports/export/activity')
 @login_required
+# Generate downloadable CSV report of user activity logs
 def export_activity():
     import csv
     from io import StringIO
@@ -852,6 +883,7 @@ def export_activity():
 
 @app.route('/settings')
 @login_required
+# Render the system settings and configuration panel
 def settings():
     if current_user.role != 'Admin':
         flash('Access denied.','error')
@@ -879,6 +911,7 @@ def settings():
 
 @app.route('/settings/algorithm', methods=['POST'])
 @login_required
+# Update thresholds for the correlation and similarity algorithms
 def save_algorithm_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
@@ -896,6 +929,7 @@ def save_algorithm_settings():
 
 @app.route('/settings/sla', methods=['POST'])
 @login_required
+# Update Service Level Agreement timeframes in the system
 def save_sla_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False})
@@ -913,6 +947,7 @@ def save_sla_settings():
 
 @app.route('/settings/system', methods=['POST'])
 @login_required
+# Update core system application preferences
 def save_system_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False})
@@ -930,6 +965,7 @@ def save_system_settings():
 
 @app.route('/settings/reset-defaults', methods=['POST'])
 @login_required
+# Restore system configurations to their factory defaults
 def reset_settings():
     if current_user.role != 'Admin':
         return jsonify({'success':False})
@@ -945,6 +981,7 @@ def reset_settings():
 
 @app.route('/settings/test-correlation')
 @login_required
+# Manually trigger the correlation engine test scan
 def test_correlation():
     if current_user.role != 'Admin':
         return jsonify({'error':'Admin only'}),403
@@ -962,6 +999,7 @@ def test_correlation():
 
 @app.route('/settings/test-similarity')
 @login_required
+# Manually trigger the similarity engine test scan
 def test_similarity():
     if current_user.role != 'Admin':
         return jsonify({'error':'Admin only'}),403
@@ -981,6 +1019,7 @@ def test_similarity():
 
 @app.route('/users')
 @login_required
+# Render the user management interface for administrators
 def users():
     if current_user.role != 'Admin':
         flash('Access denied.','error')
@@ -999,6 +1038,7 @@ def users():
 
 @app.route('/users/add', methods=['POST'])
 @login_required
+# Register a new user account into the system
 def add_user():
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
@@ -1036,6 +1076,7 @@ def add_user():
 
 @app.route('/users/edit/<int:user_id>', methods=['POST'])
 @login_required
+# Update an existing user's profile and roles
 def edit_user(user_id):
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
@@ -1074,6 +1115,7 @@ def edit_user(user_id):
 
 @app.route('/users/toggle-status/<int:user_id>', methods=['POST'])
 @login_required
+# Activate or deactivate a user account
 def toggle_user_status(user_id):
     if current_user.role != 'Admin': return jsonify({'success':False})
     if user_id == 1 or user_id == current_user.id:
@@ -1090,6 +1132,7 @@ def toggle_user_status(user_id):
 
 @app.route('/users/delete/<int:user_id>', methods=['POST'])
 @login_required
+# Permanently remove a user account from the system
 def delete_user(user_id):
     if current_user.role != 'Admin': return jsonify({'success':False})
     if user_id == 1 or user_id == current_user.id:
@@ -1108,6 +1151,7 @@ def delete_user(user_id):
 
 @app.route('/profile')
 @login_required
+# Render the logged-in user's profile page
 def profile():
     try:
         conn = get_db_connection()
@@ -1136,6 +1180,7 @@ def profile():
 
 @app.route('/profile/update', methods=['POST'])
 @login_required
+# Save changes to the logged-in user's personal details
 def update_profile():
     try:
         data = request.get_json() or request.form
@@ -1153,6 +1198,7 @@ def update_profile():
 
 @app.route('/profile/change-password', methods=['POST'])
 @login_required
+# Update the logged-in user's authentication password
 def change_password():
     try:
         from werkzeug.security import (check_password_hash,
@@ -1180,6 +1226,7 @@ def change_password():
 
 @app.route('/profile/update-preferences', methods=['POST'])
 @login_required
+# Save the logged-in user's notification preferences
 def update_preferences():
     try:
         data = request.get_json() or request.form
@@ -1219,6 +1266,7 @@ def update_preferences():
 
 @app.route('/profile/update-avatar-color', methods=['POST'])
 @login_required
+# Change the visual color of the user's avatar icon
 def update_avatar_color():
     try:
         data = request.get_json() or request.form
@@ -1238,6 +1286,7 @@ def update_avatar_color():
 
 @app.route('/api/alert-count')
 @login_required
+# Provide unread alert count via polling endpoint
 def api_alert_count():
     try:
         conn = get_db_connection()
@@ -1248,6 +1297,7 @@ def api_alert_count():
 
 @app.route('/api/dashboard-stats')
 @login_required
+# Provide dynamic dashboard metrics via JSON endpoint
 def api_dashboard_stats():
     try:
         conn = get_db_connection()
@@ -1267,6 +1317,7 @@ def api_dashboard_stats():
     except: return jsonify({'active_clusters':0,'open_incidents':0,'critical_incidents':0,'total_incidents':0,'unread_alerts':0})
 
 @app.route('/health')
+# Basic application health check endpoint
 def health():
     try:
         conn = get_db_connection()
@@ -1283,6 +1334,7 @@ def health():
 
 @app.route('/admin/rerun-algorithms/<incident_id>', methods=['POST'])
 @login_required
+# Handle logic for rerun_algorithms
 def rerun_algorithms(incident_id):
     if current_user.role != 'Admin':
         return jsonify({'success':False}),403
@@ -1302,18 +1354,21 @@ def rerun_algorithms(incident_id):
 # ─── ERROR HANDLERS ────────────────────────────
 
 @app.errorhandler(404)
+# Handle logic for not_found
 def not_found(e):
     if request.is_json:
         return jsonify({'error':'Not found','code':404}),404
     return render_template('errors/404.html'),404
 
 @app.errorhandler(403)
+# Handle logic for forbidden
 def forbidden(e):
     if request.is_json:
         return jsonify({'error':'Forbidden','code':403}),403
     return render_template('errors/403.html'),403
 
 @app.errorhandler(500)
+# Handle logic for server_error
 def server_error(e):
     if request.is_json:
         return jsonify({'error':'Internal server error','code':500}),500

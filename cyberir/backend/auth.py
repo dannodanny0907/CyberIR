@@ -1,3 +1,4 @@
+# File: auth.py - Authentication and user login management system
 from flask import (Blueprint, render_template,
     redirect, url_for, flash, request, session)
 from flask_login import (LoginManager, login_user,
@@ -11,6 +12,7 @@ login_manager = LoginManager()
 auth = Blueprint('auth', __name__)
 
 class User(UserMixin):
+    # Handle logic for __init__
     def __init__(self, id, full_name, email,
                  role, has_admin_privileges,
                  active, avatar_color=None):
@@ -23,10 +25,12 @@ class User(UserMixin):
         self.avatar_color = avatar_color or '#2563eb'
 
     @property
+    # Handle logic for is_active
     def is_active(self):
         return bool(self._active)
 
 @auth.route('/login', methods=['GET', 'POST'])
+# Handle login form submission and session setup
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -79,6 +83,7 @@ def login():
 
 @auth.route('/logout')
 @login_required
+# Terminate user session and clear authentication cookies
 def logout():
     try:
         conn = get_db_connection()
@@ -93,6 +98,7 @@ def logout():
     return redirect(url_for('auth.login'))
 
 @login_manager.user_loader
+# Flask-Login callback to reload the user object from the user ID
 def load_user(user_id):
     conn = get_db_connection()
     user_row = conn.execute(

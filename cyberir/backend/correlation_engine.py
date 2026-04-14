@@ -1,14 +1,17 @@
+# File: correlation_engine.py - Engine to detect and group related security incidents
 from database import get_db_connection
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 import json
 from collections import Counter
 
+# Handle logic for fuzzy_match
 def fuzzy_match(string_a, string_b):
     if not string_a or not string_b:
         return 0.0
     return SequenceMatcher(None, string_a.lower(), string_b.lower()).ratio()
 
+# Calculate Jaccard similarity between two indicator strings
 def compare_indicators(indicators_a, indicators_b):
     if not indicators_a or not indicators_b:
         return 0.0
@@ -22,6 +25,7 @@ def compare_indicators(indicators_a, indicators_b):
         return 0.0
     return len(intersection) / len(union)
 
+# Handle logic for calculate_time_score
 def calculate_time_score(date_a, date_b):
     if not date_a or not date_b:
         return 0.0
@@ -39,6 +43,7 @@ def calculate_time_score(date_a, date_b):
     elif diff_hours <= 48: return 0.2
     else: return 0.0
 
+# Handle logic for calculate_correlation_score
 def calculate_correlation_score(incident_a, incident_b):
     time_score = calculate_time_score(incident_a.get('reported_date'), incident_b.get('reported_date'))
     type_score = 1.0 if incident_a.get('incident_type') == incident_b.get('incident_type') else 0.0
@@ -59,6 +64,7 @@ def calculate_correlation_score(incident_a, incident_b):
     )
     return round(final_score, 4)
 
+# Handle logic for get_next_cluster_id
 def get_next_cluster_id():
     conn = get_db_connection()
     row = conn.execute("SELECT MAX(cluster_id) as max_id FROM incident_clusters").fetchone()
@@ -71,6 +77,7 @@ def get_next_cluster_id():
     except Exception:
         return "CLU-001"
 
+# Handle logic for run_correlation
 def run_correlation(new_incident_id):
     conn = get_db_connection()
     try:
@@ -207,6 +214,7 @@ def run_correlation(new_incident_id):
         print(f"Correlation error: {e}")
         return {"clustered": False, "cluster_id": None, "matches": [], "error": str(e)}
 
+# Handle logic for recalculate_cluster
 def recalculate_cluster(cluster_id):
     conn = get_db_connection()
     incidents_in_cluster = conn.execute('SELECT priority, incident_type FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
@@ -240,6 +248,7 @@ def recalculate_cluster(cluster_id):
     conn.commit()
     return {"dissolved": False, "count": count}
 
+# Detach a specific incident from its correlation cluster
 def remove_from_cluster(incident_integer_id):
     conn = get_db_connection()
     incident = conn.execute('SELECT cluster_id FROM incidents WHERE id = ?', (incident_integer_id,)).fetchone()

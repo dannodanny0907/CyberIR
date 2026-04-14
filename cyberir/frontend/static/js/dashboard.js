@@ -1,3 +1,4 @@
+/* File: dashboard.js - Chart generation and real-time dashboard updates */
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Chart Initialization

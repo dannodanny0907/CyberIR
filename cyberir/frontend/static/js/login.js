@@ -1,3 +1,4 @@
+/* File: login.js - Authentication form validation */
 document.addEventListener('DOMContentLoaded', () => {
     // Show/hide password
     const togglePassword = document.getElementById('togglePassword');

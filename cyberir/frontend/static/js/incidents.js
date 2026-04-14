@@ -1,3 +1,4 @@
+/* File: incidents.js - Client-side filtering and table operations for incidents */
 document.addEventListener('DOMContentLoaded', () => {
     const filterForm = document.getElementById('filterForm');
     const searchInput = document.getElementById('searchInput');

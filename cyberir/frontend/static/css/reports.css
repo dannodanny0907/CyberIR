@@ -1,3 +1,4 @@
+/* File: reports.css - Styles for the reporting interface */
 .algorithm-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

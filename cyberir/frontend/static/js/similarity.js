@@ -1,3 +1,4 @@
+/* File: similarity.js - Data fetching and processing for similarity views */
 document.addEventListener('DOMContentLoaded', () => {
 
     function showToast(message, type='success') {

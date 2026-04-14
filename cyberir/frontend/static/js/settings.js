@@ -1,3 +1,4 @@
+/* File: settings.js - Configuration form handlers and API integration */
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Tab switching

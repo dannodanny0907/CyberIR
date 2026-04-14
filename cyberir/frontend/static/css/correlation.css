@@ -1,3 +1,4 @@
+/* File: correlation.css - Styles for the correlation and clustering interfaces */
 /* Stats bar overrides */
 .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .stat-card { background: white; border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }

@@ -1,3 +1,4 @@
+/* File: alerts.js - Client-side logic for alert management and AJAX updates */
 document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Time ago function
