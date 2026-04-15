@@ -9,6 +9,24 @@
 {% endblock %}
 
 {% block content %}
+<!-- FILTER BANNER: shown when arriving from a dashboard chart click -->
+{% if active_filters and (active_filters.status or active_filters.priority or active_filters.type) %}
+<div class="active-filters-banner">
+    <span class="filter-icon">🔍</span>
+    <span class="filter-text">Filtering by:</span>
+    {% if active_filters.status %}
+    <span class="filter-badge filter-badge-status">Status: {{ active_filters.status }}</span>
+    {% endif %}
+    {% if active_filters.priority %}
+    <span class="filter-badge filter-badge-priority">Priority: {{ active_filters.priority }}</span>
+    {% endif %}
+    {% if active_filters.type %}
+    <span class="filter-badge filter-badge-type">Type: {{ active_filters.type }}</span>
+    {% endif %}
+    <a href="/reports" class="clear-filters-btn">✕ Clear filters</a>
+</div>
+{% endif %}
+
 <!-- SECTION 1 Algorithm Performance Report -->
 <div class="card" style="margin-bottom: 24px;">
     <div style="margin-bottom: 20px;">
@@ -115,7 +133,8 @@
             <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">By Status</div>
             
             <!-- Open -->
-            <div class="stat-status-row">
+            <a href="/reports?status=Open" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.status == 'Open' %}active-filter-row{% endif %}">
                 <div class="stat-row-label">
                     <span class="badge status-open">Open</span>
                 </div>
@@ -127,9 +146,11 @@
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ open_pct }}%</div>
             </div>
+            </a>
 
             <!-- Investigating -->
-            <div class="stat-status-row">
+            <a href="/reports?status=Investigating" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.status == 'Investigating' %}active-filter-row{% endif %}">
                 <div class="stat-row-label">
                     <span class="badge status-investigating">Investigating</span>
                 </div>
@@ -141,9 +162,11 @@
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ inv_pct }}%</div>
             </div>
+            </a>
 
             <!-- Resolved -->
-            <div class="stat-status-row">
+            <a href="/reports?status=Resolved" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.status == 'Resolved' %}active-filter-row{% endif %}">
                 <div class="stat-row-label">
                     <span class="badge status-resolved">Resolved</span>
                 </div>
@@ -155,9 +178,11 @@
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ res_pct }}%</div>
             </div>
+            </a>
 
             <!-- Closed -->
-            <div class="stat-status-row">
+            <a href="/reports?status=Closed" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.status == 'Closed' %}active-filter-row{% endif %}">
                 <div class="stat-row-label">
                     <span class="badge status-closed">Closed</span>
                 </div>
@@ -169,6 +194,7 @@
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ clo_pct }}%</div>
             </div>
+            </a>
         </div>
 
         <!-- RIGHT: By Priority -->
@@ -176,60 +202,52 @@
             <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">By Priority</div>
             
             <!-- Critical -->
-            <div class="stat-status-row">
-                <div class="stat-row-label">
-                    <span class="badge priority-critical">Critical</span>
-                </div>
+            <a href="/reports?priority=Critical" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.priority == 'Critical' %}active-filter-row{% endif %}">
+                <div class="stat-row-label"><span class="badge priority-critical">Critical</span></div>
                 <div class="stat-row-count">{{ metrics.critical_count }}</div>
                 {% set crit_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set crit_pct = (metrics.critical_count / metrics.total_incidents * 100)|round|int %} {% endif %}
-                <div class="stat-row-bar-container">
-                    <div class="stat-fill" data-width="{{ crit_pct }}" style="background: #dc2626;"></div>
-                </div>
+                <div class="stat-row-bar-container"><div class="stat-fill" data-width="{{ crit_pct }}" style="background: #dc2626;"></div></div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ crit_pct }}%</div>
             </div>
+            </a>
 
             <!-- High -->
-            <div class="stat-status-row">
-                <div class="stat-row-label">
-                    <span class="badge priority-high">High</span>
-                </div>
+            <a href="/reports?priority=High" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.priority == 'High' %}active-filter-row{% endif %}">
+                <div class="stat-row-label"><span class="badge priority-high">High</span></div>
                 <div class="stat-row-count">{{ metrics.high_count }}</div>
                 {% set high_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set high_pct = (metrics.high_count / metrics.total_incidents * 100)|round|int %} {% endif %}
-                <div class="stat-row-bar-container">
-                    <div class="stat-fill" data-width="{{ high_pct }}" style="background: #ea580c;"></div>
-                </div>
+                <div class="stat-row-bar-container"><div class="stat-fill" data-width="{{ high_pct }}" style="background: #ea580c;"></div></div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ high_pct }}%</div>
             </div>
+            </a>
 
             <!-- Medium -->
-            <div class="stat-status-row">
-                <div class="stat-row-label">
-                    <span class="badge priority-medium">Medium</span>
-                </div>
+            <a href="/reports?priority=Medium" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.priority == 'Medium' %}active-filter-row{% endif %}">
+                <div class="stat-row-label"><span class="badge priority-medium">Medium</span></div>
                 <div class="stat-row-count">{{ metrics.medium_count }}</div>
                 {% set med_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set med_pct = (metrics.medium_count / metrics.total_incidents * 100)|round|int %} {% endif %}
-                <div class="stat-row-bar-container">
-                    <div class="stat-fill" data-width="{{ med_pct }}" style="background: #2563eb;"></div>
-                </div>
+                <div class="stat-row-bar-container"><div class="stat-fill" data-width="{{ med_pct }}" style="background: #2563eb;"></div></div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ med_pct }}%</div>
             </div>
+            </a>
 
             <!-- Low -->
-            <div class="stat-status-row">
-                <div class="stat-row-label">
-                    <span class="badge priority-low">Low</span>
-                </div>
+            <a href="/reports?priority=Low" class="stat-filter-link">
+            <div class="stat-status-row {% if active_filters and active_filters.priority == 'Low' %}active-filter-row{% endif %}">
+                <div class="stat-row-label"><span class="badge priority-low">Low</span></div>
                 <div class="stat-row-count">{{ metrics.low_count }}</div>
                 {% set low_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set low_pct = (metrics.low_count / metrics.total_incidents * 100)|round|int %} {% endif %}
-                <div class="stat-row-bar-container">
-                    <div class="stat-fill" data-width="{{ low_pct }}" style="background: #16a34a;"></div>
-                </div>
+                <div class="stat-row-bar-container"><div class="stat-fill" data-width="{{ low_pct }}" style="background: #16a34a;"></div></div>
                 <div style="font-size:0.75rem; color:var(--text-secondary); width: 35px; text-align:right;">{{ low_pct }}%</div>
             </div>
+            </a>
         </div>
     </div>
 
@@ -244,6 +262,58 @@
         </div>
     </div>
 </div>
+
+<!-- SECTION 5 Filtered Incidents Table (only shown when a filter is active) -->
+{% if active_filters and (active_filters.status or active_filters.priority or active_filters.type) %}
+<div class="card" style="margin-bottom: 24px; padding: 0; overflow: hidden;">
+    <div style="padding: 16px 20px 12px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div>
+            <h2 style="font-size: 1rem; color: var(--text-primary); margin: 0 0 3px 0;">📋 Filtered Incidents</h2>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ filtered_incidents|length }} incident(s) match active filters</div>
+        </div>
+        <a href="/reports" class="clear-filters-btn" style="font-size: 0.8rem;">✕ Clear filters</a>
+    </div>
+
+    {% if filtered_incidents %}
+    <div style="overflow-x: auto;">
+        <table class="dashboard-table">
+            <thead>
+                <tr>
+                    <th>Incident ID</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Risk Score</th>
+                    <th>Reported</th>
+                    <th>Assigned To</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inc in filtered_incidents %}
+                <tr class="clickable-incident-row" data-href="/incidents/{{ inc.incident_id }}" style="cursor:pointer;">
+                    <td><span style="font-family: monospace; color: #2563eb; font-weight: 600;">{{ inc.incident_id }}</span></td>
+                    <td>{{ inc.title[:45] }}{% if inc.title|length > 45 %}...{% endif %}</td>
+                    <td><span class="badge" style="background:#f1f5f9;color:#475569;">{{ inc.incident_type }}</span></td>
+                    <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                    <td><span class="badge {% if inc.status == 'Open' %}status-open{% elif inc.status == 'Investigating' %}status-investigating{% elif inc.status == 'Resolved' %}status-resolved{% else %}status-closed{% endif %}">{{ inc.status }}</span></td>
+                    <td style="font-weight:600;">{{ inc.risk_score }}</td>
+                    <td style="color:#64748b;font-size:0.8rem;">{{ inc.reported_date[:10] if inc.reported_date else '—' }}</td>
+                    <td>{{ inc.assigned_name or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+        <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
+        <div>No incidents match the active filters.</div>
+        <a href="/reports" style="color: #2563eb; font-size: 0.875rem;">Clear filters</a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- SECTION 3 User Activity Summary -->
 <div class="card" style="padding: 0; margin-bottom: 24px;">
@@ -284,11 +354,25 @@
 <div class="card">
     <div style="margin-bottom: 20px;">
         <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">📥 Export Data</h2>
+        {% if active_filters and (active_filters.status or active_filters.priority or active_filters.type) %}
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">Filtered export available — or use the full exports below.</div>
+        {% endif %}
     </div>
-    
+
+    <!-- Filtered export button (only shown when a filter is active) -->
+    {% if active_filters and (active_filters.status or active_filters.priority or active_filters.type) %}
+    <div style="margin-bottom: 16px; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <span style="font-size: 0.875rem; color: #1e40af; font-weight: 600;">📊 Export filtered incidents only:</span>
+        <a href="/reports/export/incidents?{% if active_filters.status %}status={{ active_filters.status }}{% endif %}{% if active_filters.priority %}&priority={{ active_filters.priority }}{% endif %}{% if active_filters.type %}&type={{ active_filters.type }}{% endif %}" class="export-button" style="background: #2563eb; color: white; border-color: #2563eb;">
+            <span>📊</span> Export Filtered Incidents ({{ filtered_incidents|length }} rows)
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Always-visible full exports -->
     <div class="export-buttons-row">
         <a href="/reports/export/incidents" class="export-button">
-            <span>📊</span> Export Incidents (CSV)
+            <span>📊</span> Export All Incidents (CSV)
         </a>
         <a href="/reports/export/clusters" class="export-button">
             <span>🔗</span> Export Clusters (CSV)

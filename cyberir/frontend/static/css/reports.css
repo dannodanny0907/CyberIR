@@ -134,3 +134,62 @@
     border-color: var(--primary);
     color: var(--primary);
 }
+
+/* ── Filter banner ────────────────────────────────────────────── */
+.active-filters-banner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.875rem;
+}
+
+.filter-icon { font-size: 1rem; }
+.filter-text { font-weight: 600; color: #1e40af; }
+
+.filter-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.filter-badge-status   { background: #e0e7ff; color: #1e40af; }
+.filter-badge-priority { background: #fef3c7; color: #92400e; }
+.filter-badge-type     { background: #dcfce7; color: #166534; }
+
+.clear-filters-btn {
+    margin-left: auto;
+    color: #dc2626;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.clear-filters-btn:hover { text-decoration: underline; }
+
+/* ── Clickable stat rows ─────────────────────────────────────── */
+.stat-filter-link {
+    text-decoration: none;
+    display: block;
+}
+
+.stat-status-row {
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.stat-status-row:hover {
+    background: #f8fafc;
+    padding-left: 6px;
+}
+
+.active-filter-row {
+    background: #eff6ff !important;
+    border-left: 3px solid #2563eb;
+    padding-left: 8px !important;
+}

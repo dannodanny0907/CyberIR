@@ -38,4 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
             el.textContent = text;
         }
     });
+
+    // Make filtered incident table rows clickable
+    document.querySelectorAll('.clickable-incident-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const href = row.dataset.href;
+            if (href) window.location.href = href;
+        });
+    });
 });

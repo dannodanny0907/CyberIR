@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Closed': '#64748b'
     };
     
-    new Chart(document.getElementById('statusChart'), {
+    const statusChart = new Chart(document.getElementById('statusChart'), {
         type: 'pie',
         data: {
             labels: statusData.map(d => d.status),
@@ -31,9 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     position: 'bottom',
                     labels: { padding: 15, usePointStyle: true, boxWidth: 8 }
                 }
+            },
+            onClick: (event, activeElements) => {
+                if (activeElements.length > 0) {
+                    const label = statusChart.data.labels[activeElements[0].index];
+                    window.location.href = `/reports?status=${encodeURIComponent(label)}`;
+                }
             }
         }
     });
+    document.getElementById('statusChart').style.cursor = 'pointer';
 
     // Priority Doughnut Chart
     const priorityDataRaw = document.getElementById('priorityData').textContent;
@@ -46,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Low': '#16a34a'
     };
     
-    new Chart(document.getElementById('priorityChart'), {
+    const priorityChart = new Chart(document.getElementById('priorityChart'), {
         type: 'doughnut',
         data: {
             labels: priorityData.map(d => d.priority),
@@ -64,15 +71,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     position: 'bottom',
                     labels: { padding: 15, usePointStyle: true, boxWidth: 8 }
                 }
+            },
+            onClick: (event, activeElements) => {
+                if (activeElements.length > 0) {
+                    const label = priorityChart.data.labels[activeElements[0].index];
+                    window.location.href = `/reports?priority=${encodeURIComponent(label)}`;
+                }
             }
         }
     });
+    document.getElementById('priorityChart').style.cursor = 'pointer';
 
     // Type Horizontal Bar Chart
     const typeDataRaw = document.getElementById('typeData').textContent;
     const typeData = JSON.parse(typeDataRaw);
     
-    new Chart(document.getElementById('typeChart'), {
+    const typeChart = new Chart(document.getElementById('typeChart'), {
         type: 'bar',
         data: {
             labels: typeData.map(d => d.incident_type),
@@ -89,9 +103,16 @@ document.addEventListener('DOMContentLoaded', () => {
             scales: {
                 x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
                 y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+            },
+            onClick: (event, activeElements) => {
+                if (activeElements.length > 0) {
+                    const label = typeChart.data.labels[activeElements[0].index];
+                    window.location.href = `/reports?type=${encodeURIComponent(label)}`;
+                }
             }
         }
     });
+    document.getElementById('typeChart').style.cursor = 'pointer';
 
     // Trend Line Chart (14 Days)
     const trendDataRaw = document.getElementById('trendData').textContent;

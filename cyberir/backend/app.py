@@ -820,62 +820,143 @@ def dismiss_all_read_alerts():
 
 @app.route('/reports')
 @login_required
-# Render the reporting interface for KPI generation
+# Render the reporting interface for KPI generation with optional filters
 def reports():
     if current_user.role != 'Admin' and not current_user.has_admin_privileges:
-        flash('Access denied.','error')
+        flash('Access denied.', 'error')
         return redirect(url_for('dashboard'))
     try:
         conn = get_db_connection()
-        metrics = {
-            'total_clusters_created': conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
-            'active_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
-            'resolved_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Resolved'").fetchone()['c'],
-            'avg_cluster_size': round(conn.execute("SELECT AVG(incident_count) as a FROM incident_clusters").fetchone()['a'] or 0,1),
-            'total_correlated_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE cluster_id IS NOT NULL").fetchone()['c'],
-            'largest_cluster': conn.execute("SELECT MAX(incident_count) as m FROM incident_clusters").fetchone()['m'] or 0,
-            'total_matches_found': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c'],
-            'high_confidence': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75").fetchone()['c'],
-            'medium_confidence': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.50 AND similarity_score < 0.75").fetchone()['c'],
-            'solutions_applied': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c'],
-            'avg_similarity_score': round(conn.execute("SELECT AVG(similarity_score) as a FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['a'] or 0,2),
-            'total_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
-            'open_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c'],
-            'investigating_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'").fetchone()['c'],
-            'resolved_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Resolved'").fetchone()['c'],
-            'closed_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Closed'").fetchone()['c'],
-            'avg_resolution_time': conn.execute("SELECT AVG(resolution_time_minutes) as a FROM incidents WHERE resolution_time_minutes IS NOT NULL").fetchone()['a'] or 0,
-            'critical_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical'").fetchone()['c'],
-            'high_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='High'").fetchone()['c'],
-            'medium_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Medium'").fetchone()['c'],
-            'low_count': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Low'").fetchone()['c'],
+
+        # Read URL filter params
+        status_filter   = request.args.get('status', '').strip()
+        priority_filter = request.args.get('priority', '').strip()
+        type_filter     = request.args.get('type', '').strip()
+
+        active_filters = {
+            'status':   status_filter,
+            'priority': priority_filter,
+            'type':     type_filter,
         }
-        recent_activity = conn.execute("SELECT al.*, u.full_name, u.role FROM activity_logs al JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC LIMIT 20").fetchall()
+
+        # Build filtered incidents query
+        inc_query = """
+            SELECT i.incident_id, i.title, i.incident_type, i.priority,
+                   i.status, i.risk_score, i.reported_date,
+                   u.full_name as assigned_name
+            FROM incidents i
+            LEFT JOIN users u ON i.assigned_to = u.id
+            WHERE 1=1
+        """
+        inc_params = []
+        if status_filter:
+            inc_query += " AND i.status = ?"
+            inc_params.append(status_filter)
+        if priority_filter:
+            inc_query += " AND i.priority = ?"
+            inc_params.append(priority_filter)
+        if type_filter:
+            inc_query += " AND i.incident_type = ?"
+            inc_params.append(type_filter)
+        inc_query += " ORDER BY i.reported_date DESC"
+        filtered_incidents = conn.execute(inc_query, inc_params).fetchall()
+
+        # Existing metrics dict — unchanged
+        metrics = {
+            'total_clusters_created':     conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
+            'active_clusters':            conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
+            'resolved_clusters':          conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Resolved'").fetchone()['c'],
+            'avg_cluster_size':           round(conn.execute("SELECT AVG(incident_count) as a FROM incident_clusters").fetchone()['a'] or 0, 1),
+            'total_correlated_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE cluster_id IS NOT NULL").fetchone()['c'],
+            'largest_cluster':            conn.execute("SELECT MAX(incident_count) as m FROM incident_clusters").fetchone()['m'] or 0,
+            'total_matches_found':        conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c'],
+            'high_confidence':            conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.75").fetchone()['c'],
+            'medium_confidence':          conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similarity_score >= 0.50 AND similarity_score < 0.75").fetchone()['c'],
+            'solutions_applied':          conn.execute("SELECT COUNT(*) as c FROM incidents WHERE solution_applied_from IS NOT NULL").fetchone()['c'],
+            'avg_similarity_score':       round(conn.execute("SELECT AVG(similarity_score) as a FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['a'] or 0, 2),
+            'total_incidents':            conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
+            'open_count':                 conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c'],
+            'investigating_count':        conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Investigating'").fetchone()['c'],
+            'resolved_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Resolved'").fetchone()['c'],
+            'closed_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Closed'").fetchone()['c'],
+            'avg_resolution_time':        conn.execute("SELECT AVG(resolution_time_minutes) as a FROM incidents WHERE resolution_time_minutes IS NOT NULL").fetchone()['a'] or 0,
+            'critical_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical'").fetchone()['c'],
+            'high_count':                 conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='High'").fetchone()['c'],
+            'medium_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Medium'").fetchone()['c'],
+            'low_count':                  conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Low'").fetchone()['c'],
+        }
+
+        recent_activity = conn.execute(
+            "SELECT al.*, u.full_name, u.role FROM activity_logs al JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC LIMIT 20"
+        ).fetchall()
         conn.close()
+
         return render_template('reports.html',
             metrics=metrics,
             recent_activity=recent_activity,
+            active_filters=active_filters,
+            filtered_incidents=filtered_incidents,
             active_page='reports')
     except Exception as e:
         import traceback; traceback.print_exc()
-        flash('Error loading reports.','error')
+        flash('Error loading reports.', 'error')
         return redirect(url_for('dashboard'))
 
 @app.route('/reports/export/incidents')
 @login_required
-# Generate downloadable CSV export of incident data
+# Generate downloadable CSV export of incident data with optional filters
 def export_incidents():
     import csv
     from io import StringIO
     from flask import Response
+
+    status_filter   = request.args.get('status', '').strip()
+    priority_filter = request.args.get('priority', '').strip()
+    type_filter     = request.args.get('type', '').strip()
+
     conn = get_db_connection()
-    rows = conn.execute("SELECT i.incident_id,i.title,i.incident_type,i.priority,i.status,i.risk_score,i.affected_asset,i.affected_department,u.full_name as assigned_to,i.cluster_id,i.similar_incident_id,i.similarity_score,i.reported_date,i.resolved_date,i.resolution_time_minutes FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id").fetchall()
+    query = """
+        SELECT i.incident_id, i.title, i.incident_type, i.priority,
+               i.status, i.risk_score, i.affected_asset, i.affected_department,
+               u.full_name as assigned_to, i.cluster_id, i.similar_incident_id,
+               i.similarity_score, i.reported_date, i.resolved_date,
+               i.resolution_time_minutes
+        FROM incidents i
+        LEFT JOIN users u ON i.assigned_to = u.id
+        WHERE 1=1
+    """
+    params = []
+    if status_filter:
+        query += " AND i.status = ?"
+        params.append(status_filter)
+    if priority_filter:
+        query += " AND i.priority = ?"
+        params.append(priority_filter)
+    if type_filter:
+        query += " AND i.incident_type = ?"
+        params.append(type_filter)
+    query += " ORDER BY i.reported_date DESC"
+
+    rows = conn.execute(query, params).fetchall()
     conn.close()
+
     si = StringIO()
     w = csv.writer(si)
-    w.writerow(['incident_id','title','incident_type','priority','status','risk_score','affected_asset','affected_department','assigned_to','cluster_id','similar_incident_id','similarity_score','reported_date','resolved_date','resolution_time_minutes'])
-    for r in rows: w.writerow(list(r))
-    return Response(si.getvalue(), mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=incidents_export.csv'})
+    w.writerow(['incident_id','title','incident_type','priority','status',
+                'risk_score','affected_asset','affected_department','assigned_to',
+                'cluster_id','similar_incident_id','similarity_score',
+                'reported_date','resolved_date','resolution_time_minutes'])
+    for r in rows:
+        w.writerow(list(r))
+
+    parts = ['incidents']
+    if status_filter:   parts.append(status_filter)
+    if priority_filter: parts.append(priority_filter)
+    if type_filter:     parts.append(type_filter.replace(' ', '_'))
+    filename = '_'.join(parts) + '_export.csv'
+
+    return Response(si.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': f'attachment;filename={filename}'})
 
 @app.route('/reports/export/clusters')
 @login_required
