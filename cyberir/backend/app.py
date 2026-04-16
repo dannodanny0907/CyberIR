@@ -295,7 +295,7 @@ def log_incident():
                 "INSERT INTO incidents (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,status,assigned_to,reported_date,resolution_notes,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Open',?,?,?,?,datetime('now'),datetime('now'))",
                 (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,assigned_to,reported_date,resolution_notes,current_user.id))
             new_id = cursor.lastrowid
-            conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'CREATE_INCIDENT','incident',?)",[current_user.id,new_id])
+            conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'CREATE_INCIDENT','Incident',?,?)",[current_user.id,new_id,f"Created new incident {incident_id}: {title}"])
             conn.commit()
             conn.close()
             try:
@@ -415,7 +415,18 @@ def edit_incident(incident_id):
             conn.execute(
                 "UPDATE incidents SET title=?,description=?,incident_type=?,affected_asset=?,affected_department=?,users_affected=?,ip_address=?,attack_indicators=?,asset_criticality=?,threat_severity=?,vulnerability_exposure=?,is_repeat=?,risk_score=?,priority=?,assigned_to=?,reported_date=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
                 (title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,assigned_to,reported_date,current_user.id,incident_id))
-            conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'UPDATE_INCIDENT','incident',?,?)",[current_user.id,incident['id'],f'Edited by {current_user.full_name}'])
+            
+            changes = []
+            if incident['title'] != title: changes.append('title')
+            if incident['incident_type'] != incident_type: changes.append('type')
+            if str(incident['assigned_to'] or '') != str(assigned_to or ''):
+                u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone() if assigned_to else None
+                changes.append(f"reassigned to {u['full_name'] if u else 'Unassigned'}")
+            if incident['priority'] != priority: changes.append(f'priority to {priority}')
+            if incident['status'] != 'Open' and not changes: changes.append('general details')
+            
+            diff_text = f"Updated incident {incident['incident_id']}: modified " + ", ".join(changes) if changes else f"Updated incident {incident_id}"
+            conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'UPDATE_INCIDENT','Incident',?,?)",[current_user.id,incident['id'],diff_text])
             conn.commit()
             conn.close()
             flash(f'Incident {incident_id} updated.','success')
@@ -439,12 +450,12 @@ def assign_incident(incident_id):
         conn = get_db_connection()
         assigned_to = request.form.get('assigned_to') or None
         conn.execute("UPDATE incidents SET assigned_to=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",[assigned_to,current_user.id,incident_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'ASSIGN_INCIDENT','incident',?)",[current_user.id,f'Assigned {incident_id}'])
-        conn.commit()
         assigned_name = 'Unassigned'
         if assigned_to:
             u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone()
             if u: assigned_name = u['full_name']
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'ASSIGN_INCIDENT','Incident',?)",[current_user.id,f'Assigned incident {incident_id} to {assigned_name}'])
+        conn.commit()
         conn.close()
         return jsonify({'success':True,'assigned_name':assigned_name})
     except Exception as e:
@@ -465,7 +476,7 @@ def update_incident_status(incident_id):
             updates += ",closed_date=datetime('now')"
         params.append(incident_id)
         conn.execute(f"UPDATE incidents SET {updates} WHERE incident_id=?", params)
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','incident',?)",[current_user.id,f'Status changed to {new_status}'])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Incident',?)",[current_user.id,f"Updated incident {incident_id}: changed status to {new_status}"])
         conn.commit()
         conn.close()
         return jsonify({'success':True})
@@ -486,7 +497,7 @@ def resolve_incident(incident_id):
         conn.execute(
             "UPDATE incidents SET status='Resolved',resolved_date=datetime('now'),resolution_notes=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
             [resolution_notes,current_user.id,incident_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'RESOLVE_INCIDENT','incident',?)",[current_user.id,f'Resolved {incident_id}'])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'RESOLVE_INCIDENT','Incident',?)",[current_user.id,f"Resolved incident {incident_id} with resolution notes"])
         conn.commit()
         conn.close()
         return jsonify({'success':True})
@@ -508,7 +519,7 @@ def delete_incident(incident_id):
             return jsonify({'success':False,'message':'Cannot delete a correlated incident'})
         conn.execute("DELETE FROM alerts WHERE incident_id=?",[incident['id']])
         conn.execute("DELETE FROM incidents WHERE incident_id=?",[incident_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,details) VALUES (?,'DELETE_INCIDENT',?)",[current_user.id,f'Deleted {incident_id}'])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'DELETE_INCIDENT','Incident',?)",[current_user.id,f"Deleted incident {incident_id}"])
         conn.commit()
         conn.close()
         return jsonify({'success':True,'redirect':url_for('incidents')})
@@ -541,7 +552,7 @@ def apply_solution(incident_id):
         conn.execute(
             "UPDATE incidents SET resolution_notes=?,solution_applied_from=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
             [notes,source_id,current_user.id,incident_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,details) VALUES (?,'UPDATE_INCIDENT',?)",[current_user.id,f'Solution applied from {source_id}'])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Incident',?)",[current_user.id,f"Updated incident {incident_id}: auto-applied resolution from {source_id}"])
         conn.commit()
         conn.close()
         return jsonify({'success':True})
@@ -1033,6 +1044,7 @@ def save_algorithm_settings():
             val = data.get(key)
             if val is not None:
                 conn.execute("UPDATE settings SET setting_value=?,updated_by=?,updated_at=datetime('now') WHERE setting_key=?",[val,current_user.id,key])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Updated algorithm configurations')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True,'message':'Algorithm settings saved'})
     except Exception as e:
@@ -1051,6 +1063,7 @@ def save_sla_settings():
             val = data.get(key)
             if val is not None:
                 conn.execute("UPDATE settings SET setting_value=?,updated_by=?,updated_at=datetime('now') WHERE setting_key=?",[val,current_user.id,key])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Updated SLA timeframes')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True})
     except Exception as e:
@@ -1069,6 +1082,7 @@ def save_system_settings():
             val = data.get(key)
             if val is not None:
                 conn.execute("INSERT INTO settings (setting_key,setting_value,setting_type) VALUES (?,?,'string') ON CONFLICT(setting_key) DO UPDATE SET setting_value=?,updated_by=?,updated_at=datetime('now')",[key,val,val,current_user.id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Updated core system preferences')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True})
     except Exception as e:
@@ -1085,6 +1099,7 @@ def reset_settings():
         defaults = [('correlation_threshold','0.65'),('correlation_time_window_hours','48'),('similarity_threshold','0.50'),('similarity_result_limit','5'),('critical_sla_hours','4'),('high_sla_hours','24'),('medium_sla_hours','72'),('low_sla_hours','168'),('organization_name','CyberIR'),('incident_id_prefix','INC-')]
         for key,val in defaults:
             conn.execute("UPDATE settings SET setting_value=? WHERE setting_key=?",[val,key])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Reset system configurations to factory defaults')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True})
     except Exception as e:
@@ -1178,7 +1193,7 @@ def add_user():
             (full_name,email,generate_password_hash(password),role,has_priv,phone,current_user.id))
         new_id = cursor.lastrowid
         conn.execute("INSERT OR IGNORE INTO user_preferences (user_id) VALUES (?)",[new_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'CREATE_USER','user',?)",[current_user.id,new_id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'CREATE_USER','User Profile',?,?)",[current_user.id,new_id,f"Created new user: {email} ({role})"])
         conn.commit(); conn.close()
         return jsonify({'success':True,'message':'User created successfully'})
     except Exception as e:
@@ -1204,6 +1219,18 @@ def edit_user(user_id):
         if not full_name:
             return jsonify({'success':False,'message':'Full name is required'})
         conn = get_db_connection()
+        old_user = conn.execute("SELECT * FROM users WHERE id=?", [user_id]).fetchone()
+        
+        # Build differences logic for detailed logging
+        changes = []
+        if old_user:
+            if old_user['full_name'] != full_name: changes.append(f"name to {full_name}")
+            if user_id != 1 and old_user['email'] != email: changes.append(f"email to {email}")
+            if user_id != 1 and old_user['role'] != role: changes.append(f"role to {role}")
+            if bool(old_user['has_admin_privileges']) != bool(has_priv):
+                changes.append("granted admin privileges" if has_priv else "revoked admin privileges")
+            if password: changes.append("reset password")
+            
         # Protect admin email from being changed
         if user_id == 1:
             conn.execute(
@@ -1217,7 +1244,10 @@ def edit_user(user_id):
             conn.execute(
                 "UPDATE users SET full_name=?,email=?,phone_number=?,role=?,has_admin_privileges=? WHERE id=?",
                 [full_name,email,phone,role,has_priv,user_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id) VALUES (?,'UPDATE_USER','user',?)",[current_user.id,user_id])
+                
+        user_display = old_user['full_name'] if old_user else email
+        details_text = f"Updated user profile for {user_display}: " + (", ".join(changes) if changes else "modified general profile details")
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'UPDATE_USER','User Profile',?,?)",[current_user.id,user_id,details_text])
         conn.commit(); conn.close()
         return jsonify({'success':True,'message':'User updated successfully'})
     except Exception as e:
@@ -1250,9 +1280,11 @@ def delete_user(user_id):
         return jsonify({'success':False,'message':'Cannot delete this user'})
     try:
         conn = get_db_connection()
+        del_user = conn.execute("SELECT email FROM users WHERE id=?",[user_id]).fetchone()
+        email = del_user['email'] if del_user else f"ID {user_id}"
         conn.execute("DELETE FROM user_preferences WHERE user_id=?",[user_id])
         conn.execute("DELETE FROM users WHERE id=?",[user_id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type) VALUES (?,'DELETE_USER')",[current_user.id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'DELETE_USER','User Profile',?)",[current_user.id,f"Deleted user: {email}"])
         conn.commit(); conn.close()
         return jsonify({'success':True})
     except Exception as e:
@@ -1300,8 +1332,14 @@ def update_profile():
         if not full_name:
             return jsonify({'success':False,'message':'Name required'})
         conn = get_db_connection()
+        old = conn.execute("SELECT full_name, phone_number FROM users WHERE id=?",[current_user.id]).fetchone()
+        changes = []
+        if old and old['full_name'] != full_name: changes.append("name")
+        if old and old['phone_number'] != phone: changes.append("phone number")
+        
         conn.execute("UPDATE users SET full_name=?,phone_number=? WHERE id=?",[full_name,phone,current_user.id])
-        conn.execute("INSERT INTO activity_logs (user_id,action_type) VALUES (?,'UPDATE_USER')",[current_user.id])
+        txt = "Updated personal profile: modified " + " and ".join(changes) if changes else "Updated personal profile details"
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_USER','Profile',?)",[current_user.id,txt])
         conn.commit(); conn.close()
         return jsonify({'success':True,'message':'Profile updated','new_name':full_name})
     except Exception as e:
@@ -1330,6 +1368,7 @@ def change_password():
             conn.close()
             return jsonify({'success':False,'field':'confirm_password','message':'Passwords do not match'})
         conn.execute("UPDATE users SET password_hash=? WHERE id=?",[generate_password_hash(new_pwd),current_user.id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_USER','Profile','Changed personal account password')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True,'message':'Password changed'})
     except Exception as e:
@@ -1370,6 +1409,7 @@ def update_preferences():
              int(data.get('in_app_alert_sound',1)),
              int(data.get('dark_mode',0)),
              int(data.get('items_per_page',25))])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_USER','Preferences','Updated notification and interface preferences')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True})
     except Exception as e:

@@ -322,29 +322,30 @@
     </div>
     
     {% if recent_activity|length > 0 %}
-    <table class="dashboard-table">
-        <thead>
-            <tr>
-                <th>User</th>
-                <th>Action</th>
-                <th>Target</th>
-                <th>Time</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for a in recent_activity %}
-            <tr>
-                <td style="font-weight: 500;">
-                    {{ a.full_name }}
-                    <span style="font-size:0.75rem; color:#94a3b8; font-weight:normal; margin-left:4px;">{{ a.role }}</span>
-                </td>
-                <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ a.action_type }}</span></td>
-                <td>{{ a.target_type }} <span style="font-family:monospace; color:#64748b; font-size:0.8rem;">#{{ a.target_id }}</span></td>
-                <td class="activity-time" data-created="{{ a.created_at }}"></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div style="overflow-x: auto; padding: 0 20px 20px 20px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151;">
+            <thead>
+                <tr style="border-bottom: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; text-align: left;">
+                    <th style="padding: 8px 12px; font-weight: normal;">Time</th>
+                    <th style="padding: 8px 12px; font-weight: normal;">Component</th>
+                    <th style="padding: 8px 12px; font-weight: normal;">Event</th>
+                    <th style="padding: 8px 12px; font-weight: normal;">User</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in recent_activity %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 8px 12px; white-space: nowrap; color: #6b7280;">
+                        {{ a.created_at[8:10] }}/{{ a.created_at[5:7] }}/{{ a.created_at[0:4] }} {{ a.created_at[11:] }}
+                    </td>
+                    <td style="padding: 8px 12px; white-space: nowrap;"><span style="color: #1f2937; font-weight: bold; margin-right: 6px;">|</span> {{ a.target_type or 'System' }}</td>
+                    <td style="padding: 8px 12px; color: #374151;">{{ a.details or a.action_type }}</td>
+                    <td style="padding: 8px 12px; white-space: nowrap; color: #4b5563;">{{ a.full_name }} <span style="font-size:0.75rem; color:#94a3b8; margin-left:4px;">{{ a.role|upper }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <div style="padding: 30px; text-align: center; color: var(--text-secondary);">No recent activity logs.</div>
     {% endif %}

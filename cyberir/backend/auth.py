@@ -70,8 +70,8 @@ def login():
                    WHERE id=?""", [user.id])
             conn2.execute(
                 """INSERT INTO activity_logs
-                   (user_id, action_type)
-                   VALUES (?, 'LOGIN')""",
+                   (user_id, action_type, target_type, details)
+                   VALUES (?, 'LOGIN', 'System', 'User logged in successfully')""",
                 [user.id])
             conn2.commit()
             conn2.close()
@@ -88,7 +88,7 @@ def logout():
     try:
         conn = get_db_connection()
         conn.execute(
-            "INSERT INTO activity_logs (user_id, action_type) VALUES (?, 'LOGOUT')",
+            "INSERT INTO activity_logs (user_id, action_type, target_type, details) VALUES (?, 'LOGOUT', 'System', 'User logged out successfully')",
             [current_user.id])
         conn.commit()
         conn.close()

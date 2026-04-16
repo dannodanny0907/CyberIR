@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Files | {{ app_name }}{% end block %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}">
+{% end block %}
+
+{% block content %}
+<div class="activity-container">
+    <div class="activity-header">
+        <div class="activity-title">
+            <h1>Log files</h1>
+        </div>
+        <div class="activity-actions">
+            <button class="btn-icon" title="View Options"><i class="fas fa-th-large"></i></button>
+            <button class="btn-icon" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+            <button class="btn-icon" title="Help"><i class="fas fa-question-circle"></i></button>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-dropdown">
+            <span class="filter-text">Events ({{ logs|length }})</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="log-table" id="logTable">
+            <thead>
+                <tr>
+                    <th width="20%">Time</th>
+                    <th width="15%">Component</th>
+                    <th width="50%">Event</th>
+                    <th width="15%">User</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for log in logs %}
+                    <tr>
+                        <td class="log-time">{{ log.created_at|replace('-', '/')|replace('T', ' ') }}</td>
+                        <td class="log-component"><span class="component-pipe">|</span> {{ log.target_type }}</td>
+                        <td class="log-event">{{ log.action }}</td>
+                        <td class="log-user">{{ log.user_name }}</td>
+                    </tr>
+                    {% end for %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="no-logs">No log files recorded yet.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% end block %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/activity.js') }}"></script>
+{% end block %}
