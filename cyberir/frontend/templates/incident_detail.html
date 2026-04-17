@@ -52,6 +52,86 @@
             {% endif %}
         </div>
 
+        <!-- Card 1.2: Contact Information and Extra Details -->
+        <div class="card">
+            <div class="card-section-title">Contact Information</div>
+            <div class="detail-row">
+                <span class="detail-label">Full Name</span>
+                <span class="detail-value">{{ incident.contact_full_name or '—' }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Job Title</span>
+                <span class="detail-value">{{ incident.contact_job_title or '—' }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Office & Phone</span>
+                <span class="detail-value">{{ incident.contact_office or '—' }} | W: {{ incident.contact_work_phone or '—' }} | M: {{ incident.contact_mobile_phone or '—' }}</span>
+            </div>
+            {% if incident.contact_additional %}
+            <div class="detail-row" style="border:none;">
+                <span class="detail-label">Additional Info</span>
+                <span class="detail-value">{{ incident.contact_additional }}</span>
+            </div>
+            {% endif %}
+            
+            <div style="margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0;">
+                <div class="card-section-title" style="margin-bottom:10px;">Detection & Incident Type</div>
+                <div class="detail-row">
+                    <span class="detail-label">Incident Type</span>
+                    <span class="detail-value">
+                        {{ incident.incident_type or '—' }}
+                        {% if incident.incident_type_other %}
+                          — {{ incident.incident_type_other }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-row" style="border:none;">
+                    <span class="detail-label">Detection Method</span>
+                    <span class="detail-value">
+                        {{ incident.detection_method or '—' }}
+                        {% if incident.detection_method == 'Other' and incident.detection_method_other %}
+                          — {{ incident.detection_method_other }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 1.5: Impact & Data Sensitivity -->
+        <div class="card">
+            <div class="card-section-title">Impact of Incident</div>
+            <div class="detail-row">
+                <span class="detail-label">Impact(s)</span>
+                <span class="detail-value">
+                    {{ incident.impact_selections or '—' }}
+                    {% if incident.impact_other %} — {{ incident.impact_other }}{% endif %}
+                </span>
+            </div>
+            {% if incident.impact_additional %}
+            <div class="detail-row" style="border:none;">
+                <span class="detail-label">Additional Impact Info</span>
+                <span class="detail-value">{{ incident.impact_additional }}</span>
+            </div>
+            {% endif %}
+            
+            <div style="margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0;">
+                <div class="card-section-title" style="margin-bottom:10px;">Data Sensitivity</div>
+                <div class="detail-row">
+                    <span class="detail-label">Data Type(s)</span>
+                    <span class="detail-value">
+                        {{ incident.data_sensitivity_selections or '—' }}
+                        {% if incident.data_sensitivity_other %} — {{ incident.data_sensitivity_other }}{% endif %}
+                    </span>
+                </div>
+                {% if incident.data_sensitivity_additional %}
+                <div class="detail-row" style="border:none;">
+                    <span class="detail-label">Additional Data Info</span>
+                    <span class="detail-value">{{ incident.data_sensitivity_additional }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Card 2 -->
         <div class="card">
             <div class="card-section-title">Affected Resources</div>
@@ -86,6 +166,42 @@
                 </div>
             </div>
             {% endif %}
+
+            <div style="margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0;">
+                <div class="card-section-title" style="margin-bottom:10px;">Systems Affected Details</div>
+                <div class="detail-row">
+                    <span class="detail-label">Detected / Occurred Time</span>
+                    <span class="detail-value">{{ incident.detected_datetime or '—' }} / {{ incident.incident_occurred_datetime or '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Attack Source & IPs</span>
+                    <span class="detail-value">{{ incident.attack_source or '—' }} ({{ incident.attack_source_ips or 'none' }})</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Affected System IPs</span>
+                    <span class="detail-value">{{ incident.affected_system_ips or '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Functions & OS</span>
+                    <span class="detail-value">{{ incident.affected_system_functions or '—' }} | {{ incident.affected_system_os or '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Physical Location</span>
+                    <span class="detail-value">{{ incident.affected_system_location or '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Security Software</span>
+                    <span class="detail-value">{{ incident.affected_system_security_software or '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Estimated Systems Count</span>
+                    <span class="detail-value">{{ incident.affected_systems_count or '—' }}</span>
+                </div>
+                <div class="detail-row" style="border:none;">
+                    <span class="detail-label">Third Parties Involved</span>
+                    <span class="detail-value">{{ incident.third_parties_involved or '—' }}</span>
+                </div>
+            </div>
         </div>
 
         <!-- Card 3 -->
