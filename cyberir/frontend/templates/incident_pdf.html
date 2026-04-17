@@ -155,11 +155,15 @@
   <table class="header-table">
     <tr>
       <td class="header-logo-cell">
+        {% if logo_data %}
+        <img src="{{ logo_data }}" alt="CUT Logo" style="width:70px; height:auto;">
+        {% else %}
         <!-- CUT Logo placeholder -->
         <div style="width:50px;height:50px;background:#1a4731;
           border-radius:50%;text-align:center;line-height:50px;
           color:white;font-weight:bold;
           font-size:14pt">CUT</div>
+        {% endif %}
       </td>
       <td class="header-title-cell">
         <div class="main-title">CHINHOYI UNIVERSITY OF TECHNOLOGY</div>

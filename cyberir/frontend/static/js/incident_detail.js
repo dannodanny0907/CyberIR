@@ -358,16 +358,23 @@ document.getElementById('exportPdfBtn')?.addEventListener('click', async functio
     document.getElementById('pdfEngineerName').value = data.default_engineer;
     document.getElementById('pdfManagerName').value = data.default_manager;
     
-    renderPdfPreview(data.incident, data.assigned_name, data.default_engineer, data.default_manager);
+    renderPdfPreview(data.incident, data.assigned_name, data.default_engineer, data.default_manager, data.logo_data);
 });
 
-function renderPdfPreview(incident, assignedName, engineerName, managerName) {
+function renderPdfPreview(incident, assignedName, engineerName, managerName, logoData) {
     const preview = document.getElementById('pdfPreviewContent');
+    const logoHtml = logoData 
+        ? `<img src="${logoData}" alt="CUT Logo" style="width:60px; height:auto; margin-right: 15px;">` 
+        : `<div style="width:50px;height:50px;background:#1a4731;border-radius:50%;text-align:center;line-height:50px;color:white;font-weight:bold;font-size:14pt;margin-right:15px;">CUT</div>`;
+
     preview.innerHTML = `
     <div style="font-family:'Times New Roman',serif;font-size:11pt;color:#111;padding:8px">
-      <div style="text-align:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1a4731">
-        <strong style="font-size:13pt;color:#1a4731">CHINHOYI UNIVERSITY OF TECHNOLOGY</strong><br>
-        <strong>ICT — Cybersecurity Incident Report Form</strong>
+      <div style="display:flex; align-items:center; justify-content:center; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #1a4731">
+        ${logoHtml}
+        <div style="text-align:center;">
+          <strong style="font-size:13pt;color:#1a4731">CHINHOYI UNIVERSITY OF TECHNOLOGY</strong><br>
+          <strong>ICT — Cybersecurity Incident Report Form</strong>
+        </div>
       </div>
       <p><strong>Case Number:</strong> ${incident.incident_id} &nbsp;&nbsp; <strong>Date:</strong> ${incident.reported_date}<br>
         <strong>Detection Method:</strong> ${incident.detection_method || '—'}</p><hr>

@@ -32,6 +32,20 @@ def generate_pdf_from_html(html_string):
 
 import csv
 from io import StringIO, BytesIO
+from flask import render_template_string
+import base64
+
+def get_logo_base64():
+    logo_path = os.path.join(ROOT, 'src', 'cut_logo.png')
+    if os.path.exists(logo_path):
+        try:
+            with open(logo_path, "rb") as image_file:
+                return "data:image/png;base64," + base64.b64encode(image_file.read()).decode('utf-8')
+        except Exception as e:
+            print(f"Error loading logo: {e}")
+            return ""
+    return ""
+
 from flask import (Flask, render_template,
     redirect, url_for, flash, request, jsonify, Response)
 from flask_login import (login_required, current_user)
@@ -540,7 +554,8 @@ def get_pdf_data(incident_id):
         "incident": dict(incident),
         "assigned_name": assigned_name,
         "default_engineer": eng['setting_value'] if eng else 'CHABVUTAGONDO .T.',
-        "default_manager": mgr['setting_value'] if mgr else 'MUCHOVO .R.'
+        "default_manager": mgr['setting_value'] if mgr else 'MUCHOVO .R.',
+        "logo_data": get_logo_base64()
     })
 
 @app.route('/incidents/generate-pdf/<incident_id>', methods=['POST'])
@@ -563,7 +578,8 @@ def generate_pdf(incident_id):
         incident=dict(incident),
         assigned_name=assigned_name,
         engineer_name=engineer_name,
-        manager_name=manager_name
+        manager_name=manager_name,
+        logo_data=get_logo_base64()
     )
     
     pdf_bytes = generate_pdf_from_html(html_content)
