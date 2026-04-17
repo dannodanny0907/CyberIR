@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     phone_number TEXT,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('Admin', 'Analyst', 'Viewer')),
+    role TEXT NOT NULL CHECK(role IN ('Admin', 'Analyst', 'Viewer', 'CIRT')),
     has_admin_privileges BOOLEAN DEFAULT 0,
     is_active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -45,7 +45,44 @@ CREATE TABLE IF NOT EXISTS incidents (
     resolution_notes TEXT,
     resolution_time_minutes INTEGER,
     created_by INTEGER NOT NULL REFERENCES users(id),
-    updated_by INTEGER REFERENCES users(id)
+    updated_by INTEGER REFERENCES users(id),
+    -- Incident Detection Method
+    detection_method TEXT,
+    detection_method_other TEXT,
+    -- Section 1: Contact Information (reporter details)
+    contact_full_name TEXT,
+    contact_job_title TEXT,
+    contact_office TEXT,
+    contact_work_phone TEXT,
+    contact_mobile_phone TEXT,
+    contact_additional TEXT,
+    -- Section 3: Impact of Incident
+    impact_selections TEXT,
+    impact_other TEXT,
+    impact_additional TEXT,
+    -- Section 4: Sensitivity of Affected Data
+    data_sensitivity_selections TEXT,
+    data_sensitivity_other TEXT,
+    data_sensitivity_additional TEXT,
+    -- Section 5: Systems Affected
+    detected_datetime TIMESTAMP,
+    incident_occurred_datetime TIMESTAMP,
+    attack_source TEXT,
+    affected_system_ips TEXT,
+    attack_source_ips TEXT,
+    affected_system_functions TEXT,
+    affected_system_os TEXT,
+    affected_system_location TEXT,
+    affected_system_security_software TEXT,
+    affected_systems_count INTEGER DEFAULT 1,
+    third_parties_involved TEXT,
+    -- Incident Type Other
+    incident_type_other TEXT,
+    -- CIRT Escalation
+    escalated_to_cirt BOOLEAN DEFAULT 0,
+    cirt_status TEXT DEFAULT 'Assigned',
+    cirt_resolution_notes TEXT,
+    cirt_resolved_date TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS incident_clusters (

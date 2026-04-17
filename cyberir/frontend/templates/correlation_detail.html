@@ -23,7 +23,7 @@
             <h2 style="font-size: 1.8rem; margin: 4px 0 16px 0; color: var(--text-primary);">{{ cluster.cluster_name }}</h2>
             
             <div style="display:flex; gap:10px; margin-bottom: 20px;">
-                <span class="badge priority-{{ (cluster.severity or 'Medium')|lower }}">{{ cluster.severity or 'Medium' }} Cluster</span>
+                <span class="badge priority-{{ (cluster.severity or 'Moderate')|lower }}">{{ cluster.severity or 'Moderate' }} Cluster</span>
                 <span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}">{{ cluster.status }}</span>
                 <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">{{ cluster.primary_type }} Primary</span>
             </div>
@@ -49,7 +49,7 @@
                             <th>Incident ID</th>
                             <th>Title</th>
                             <th>Type</th>
-                            <th>Priority</th>
+                            <th>Severity</th>
                             <th>Status</th>
                             <th>Risk Score</th>
                             <th>Date</th>
@@ -135,7 +135,7 @@
             <div class="card-section-title">Cluster Details</div>
             <div class="detail-row"><span class="detail-label">Cluster ID</span><span class="detail-value" style="font-family:monospace; font-weight:bold;">{{ cluster.cluster_id }}</span></div>
             <div class="detail-row"><span class="detail-label">Primary Incident Type</span><span class="detail-value">{{ cluster.primary_type }}</span></div>
-            <div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value"><span class="badge priority-{{ (cluster.severity or 'Medium')|lower }}">{{ cluster.severity or 'Medium' }}</span></span></div>
+            <div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value"><span class="badge priority-{{ (cluster.severity or 'Moderate')|lower }}">{{ cluster.severity or 'Moderate' }}</span></span></div>
             <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge status-{{ cluster.status|lower|replace(' ', '-') }}">{{ cluster.status }}</span></span></div>
             <div class="detail-row"><span class="detail-label">First Detected</span><span class="detail-value">{{ cluster.first_detected[:10] }}</span></div>
             <div class="detail-row"><span class="detail-label">Last Updated</span><span class="detail-value time-ago" data-time="{{ cluster.last_updated }}"></span></div>

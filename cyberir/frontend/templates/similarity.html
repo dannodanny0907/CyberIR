@@ -97,7 +97,7 @@
                 <a href="/incidents/{{ inc.incident_id }}" class="comparison-incident-id">{{ inc.incident_id }}</a>
                 <div class="comparison-title">{{ inc.title[:40] }}{% if inc.title|length > 40 %}...{% endif %}</div>
                 <div class="comparison-field-row">Type: <span class="badge" style="background:#f1f5f9; color:#475569;">{{ inc.incident_type }}</span></div>
-                <div class="comparison-field-row">Priority: <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></div>
+                <div class="comparison-field-row">Severity: <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></div>
                 <div class="comparison-field-row">Status: <span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span></div>
                 <div class="comparison-field-row">Asset: <span style="font-weight:600; color:var(--text-primary);">{{ inc.affected_asset }}</span></div>
             </div>
@@ -107,7 +107,7 @@
                 <a href="/incidents/{{ inc.similar_to_id }}" class="comparison-incident-id" style="color:#64748b;">{{ inc.similar_to_id }}</a>
                 <div class="comparison-title">{{ inc.similar_to_title[:40] }}{% if inc.similar_to_title|length > 40 %}...{% endif %}</div>
                 <div class="comparison-field-row">Type: <span class="badge" style="background:#f1f5f9; color:#475569;">{{ inc.incident_type }}</span></div>
-                <div class="comparison-field-row">Priority: <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></div>
+                <div class="comparison-field-row">Severity: <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></div>
                 <div class="comparison-field-row">Status: <span class="badge" style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0;">✅ {{ inc.similar_status }}</span></div>
                 <div class="comparison-field-row">Asset: <span style="font-weight:600; color:var(--text-primary);">{{ inc.affected_asset }}</span></div>
                 

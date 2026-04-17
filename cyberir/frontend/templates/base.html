@@ -20,6 +20,22 @@
     </div>
 
     <nav class="nav-links">
+            {% if current_user.role == 'CIRT' %}
+      <div class="nav-section-label">CIRT PORTAL</div>
+      <div class="nav-section-cirt">
+        <a href="/cirt/incidents" class="{{ 'active' if active_page == 'cirt_incidents' else '' }}">
+          <span class="icon">🚨</span> CIRT Incidents
+        </a>
+        <a href="/alerts" class="{{ 'active' if active_page == 'alerts' else '' }}">
+          <span class="icon">🔔</span> Alerts
+          {% if unread_alerts_count > 0 %}
+          <span class="alert-badge" id="sidebarAlertBadge">{{ unread_alerts_count }}</span>
+          {% else %}
+          <span class="alert-badge" id="sidebarAlertBadge" style="display:none">0</span>
+          {% endif %}
+        </a>
+      </div>
+      {% else %}
       <div class="nav-section-label">Main</div>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">
         <span class="icon">🏠</span> Dashboard
@@ -56,6 +72,7 @@
       <a href="/users" class="{{ 'active' if active_page == 'users' else '' }}">
         <span class="icon">👥</span> Users
       </a>
+      {% endif %}
       {% endif %}
     </nav>
 

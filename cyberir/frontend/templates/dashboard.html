@@ -14,7 +14,7 @@
   {{ incidents_by_status | tojson }}
 </script>
 <script id="priorityData" type="application/json">
-  {{ incidents_by_priority | tojson }}
+  {{ incidents_by_severity | tojson }}
 </script>
 <script id="typeData" type="application/json">
   {{ incidents_by_type | tojson }}
@@ -83,7 +83,7 @@
         <div class="metric-icon circle ic-darkred">⚠️</div>
         <div>
             <div class="metric-count" id="stat-critical">{{ critical_incidents }}</div>
-            <div class="metric-label">Critical</div>
+            <div class="metric-label">Catastrophic</div>
         </div>
     </div>
     
@@ -151,7 +151,7 @@
                     <tr>
                         <th>Incident ID</th>
                         <th>Title</th>
-                        <th>Priority</th>
+                        <th>Severity</th>
                         <th>Risk Score</th>
                         <th>Assigned To</th>
                     </tr>
@@ -166,9 +166,9 @@
                             <div style="font-weight: 700;">{{ inc.risk_score }}</div>
                             <div class="mini-risk-bar">
                                 {% set color = '#16a34a' %}
-                                {% if inc.priority == 'Critical' %}{% set color = '#dc2626' %}
-                                {% elif inc.priority == 'High' %}{% set color = '#ea580c' %}
-                                {% elif inc.priority == 'Medium' %}{% set color = '#2563eb' %}{% endif %}
+                                {% if inc.priority == 'Catastrophic' %}{% set color = '#dc2626' %}
+                                {% elif inc.priority == 'Major' %}{% set color = '#ea580c' %}
+                                {% elif inc.priority == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
                                 <div class="mini-risk-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};"></div>
                             </div>
                         </td>
@@ -260,7 +260,7 @@
         <div style="font-size: 0.8rem; color: #64748b;">Incidents with automatically detected historical matches</div>
     </div>
     
-    {% if recent_similarity_matches %}
+    {% if recent_similarity %}
     <div style="overflow-x: auto;">
         <table class="dashboard-table">
             <thead>
@@ -274,7 +274,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for match in recent_similarity_matches %}
+                {% for match in recent_similarity %}
                 <tr data-href="/incidents/{{ match.incident_id }}">
                     <td>
                         <div style="font-family: monospace; color: #2563eb; font-size: 0.8rem; margin-bottom: 2px;">{{ match.incident_id }}</div>
@@ -323,7 +323,7 @@
                     <th>Incident ID</th>
                     <th>Title</th>
                     <th>Type</th>
-                    <th>Priority</th>
+                    <th>Severity</th>
                     <th>Status</th>
                     <th>Risk Score</th>
                     <th>Reported</th>

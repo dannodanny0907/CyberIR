@@ -23,7 +23,10 @@
                 <h2 style="font-size: 1.5rem; margin: 0; color: var(--text-primary);">{{ incident.title }}</h2>
                 <div class="edit-delete-row">
                     {% if current_user.role in ['Admin', 'Analyst'] and incident.status != 'Closed' %}
-                    <a href="/incidents/{{ incident.incident_id }}/edit" class="btn-secondary" style="text-decoration:none; display:flex; align-items:center; gap:6px;">Edit</a>
+                                    {% if current_user.has_admin_privileges or current_user.role == 'Admin' or (current_user.id == incident.assigned_to) or (current_user.id == incident.created_by) or not incident.escalated_to_cirt %}
+                <button class="btn-pdf-export" id="exportPdfBtn" data-incident-id="{{ incident.incident_id }}" style="margin-right:8px; display:inline-flex; align-items:center; gap:6px;">📄 Export PDF</button>
+                {% endif %}
+                <a href="/incidents/{{ incident.incident_id }}/edit" class="btn-secondary" style="text-decoration:none; display:flex; align-items:center; gap:6px;">Edit</a>
                     {% endif %}
                     {% if current_user.role == 'Admin' %}
                     <button class="btn-delete-header" id="detailDeleteBtn" title="Delete Incident">
@@ -108,9 +111,9 @@
             <div style="margin-top: 20px;">
                 <div class="detail-label" style="margin-bottom: 8px;">Risk Score</div>
                 {% set color = '#16a34a' %}
-                {% if incident.priority == 'Critical' %}{% set color = '#dc2626' %}
-                {% elif incident.priority == 'High' %}{% set color = '#ea580c' %}
-                {% elif incident.priority == 'Medium' %}{% set color = '#2563eb' %}{% endif %}
+                {% if incident.priority == 'Catastrophic' %}{% set color = '#dc2626' %}
+                {% elif incident.priority == 'Major' %}{% set color = '#ea580c' %}
+                {% elif incident.priority == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
                 <div id="riskScoreValue" style="font-size: 2.5rem; font-weight: 800; color: {{ color }};">{{ incident.risk_score or 0 }}</div>
                 <div class="risk-score-bar-large">
                     <div class="risk-score-fill-large" style="width: 0%; background: {{ color }};" data-target="{{ incident.risk_score or 0 }}"></div>
@@ -352,7 +355,7 @@
     <span class="detail-label">Severity</span>
     <span class="detail-value">
       <span class="badge-{{ (cluster.severity or 'medium') | lower }}">
-        {{ cluster.severity or 'Medium' }}
+        {{ cluster.severity or 'Moderate' }}
       </span>
     </span>
   </div>

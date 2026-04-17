@@ -31,3 +31,63 @@
 .field-error:focus {
   box-shadow: 0 0 0 3px rgba(220,38,38,0.1) !important;
 }
+
+/* Multi-select styling */
+.multi-select-field {
+    width: 100%;
+    min-height: 150px;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-family: inherit;
+}
+.multi-select-field option {
+    padding: 6px 8px;
+    margin: 1px 0;
+    border-radius: 3px;
+}
+.multi-select-field option:checked {
+    background: #2563eb;
+    color: white;
+}
+.multi-select-hint {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Other input slide wrapper */
+.other-input-container {
+    margin-top: 8px;
+    display: none;
+}
+.other-input-container.visible {
+    display: block;
+}
+
+/* Attack source radio buttons styled as toggles */
+.attack-source-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+.attack-source-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.875rem;
+    background: white;
+    transition: all 0.15s;
+}
+input[type="radio"]:checked + .attack-source-btn {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+.attack-source-radio {
+    display: none;
+}

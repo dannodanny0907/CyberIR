@@ -60,10 +60,10 @@
 
     <select name="severity" class="filter-select">
         <option value="All Severities" {% if request.args.get('severity') == 'All Severities' or not request.args.get('severity') %}selected{% endif %}>All Severities</option>
-        <option value="Critical" {% if request.args.get('severity') == 'Critical' %}selected{% endif %}>Critical</option>
-        <option value="High" {% if request.args.get('severity') == 'High' %}selected{% endif %}>High</option>
-        <option value="Medium" {% if request.args.get('severity') == 'Medium' %}selected{% endif %}>Medium</option>
-        <option value="Low" {% if request.args.get('severity') == 'Low' %}selected{% endif %}>Low</option>
+        <option value="Catastrophic" {% if request.args.get('severity') == 'Catastrophic' %}selected{% endif %}>Catastrophic</option>
+        <option value="Major" {% if request.args.get('severity') == 'Major' %}selected{% endif %}>Major</option>
+        <option value="Moderate" {% if request.args.get('severity') == 'Moderate' %}selected{% endif %}>Moderate</option>
+        <option value="Minor" {% if request.args.get('severity') == 'Minor' %}selected{% endif %}>Minor</option>
     </select>
     
     <select name="type" class="filter-select">

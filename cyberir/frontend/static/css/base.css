@@ -16,10 +16,10 @@
   --warning: #d97706;
   --danger: #dc2626;
   --info: #2563eb;
-  --badge-critical: #dc2626;
-  --badge-high: #ea580c;
-  --badge-medium: #2563eb;
-  --badge-low: #16a34a;
+  --badge-catastrophic: #dc2626;
+  --badge-major: #ea580c;
+  --badge-moderate: #2563eb;
+  --badge-minor: #16a34a;
 }
 
 body { display: flex; margin: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--main-bg); }
@@ -118,10 +118,10 @@ body { display: flex; margin: 0; font-family: 'Inter', system-ui, sans-serif; ba
 .btn-primary { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-secondary { background: white; color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-.badge-critical { background: var(--badge-critical); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
-.badge-high { background: var(--badge-high); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
-.badge-medium { background: var(--badge-medium); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
-.badge-low { background: var(--badge-low); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+.badge-catastrophic { background: var(--badge-catastrophic); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+.badge-major { background: var(--badge-major); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+.badge-moderate { background: var(--badge-moderate); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+.badge-minor { background: var(--badge-minor); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
 .status-open { color: #dc2626; font-weight: 600; }
 .status-investigating { color: #d97706; font-weight: 600; }
 .status-resolved { color: #16a34a; font-weight: 600; }
@@ -509,3 +509,11 @@ body { display: flex; margin: 0; font-family: 'Inter', system-ui, sans-serif; ba
   background: #1f0a0a;
   color: #fca5a5;
 }
+
+.badge-critical { background-color: var(--badge-catastrophic-bg, #fef2f2); color: var(--badge-catastrophic-text, #dc2626); }
+.badge-high { background-color: var(--badge-major-bg, #fff7ed); color: var(--badge-major-text, #ea580c); }
+.badge-medium { background-color: var(--badge-moderate-bg, #eff6ff); color: var(--badge-moderate-text, #2563eb); }
+.badge-low { background-color: var(--badge-minor-bg, #f0fdf4); color: var(--badge-minor-text, #16a34a); }
+
+.role-cirt { background: #0d9488; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+.nav-section-cirt { background: #fef2f2; border-left: 3px solid #dc2626; margin: 8px; border-radius: 6px; padding: 4px 0; }

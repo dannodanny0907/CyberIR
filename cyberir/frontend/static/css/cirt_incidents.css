@@ -1,0 +1,22 @@
+
+.cirt-banner {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    color: #991b1b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.badge-catastrophic.recent {
+    animation: pulse-red 2s infinite;
+}
+@keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+}

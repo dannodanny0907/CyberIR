@@ -292,3 +292,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })
 });
+
+document.getElementById('savePdfConfigBtn')?.addEventListener('click', async function() {
+  this.textContent = 'Saving...';
+  this.disabled = true;
+  const data = {
+    pdf_cybersecurity_engineer: document.getElementById('pdf_cybersecurity_engineer').value,
+    pdf_technical_services_manager: document.getElementById('pdf_technical_services_manager').value
+  };
+  try {
+    const r = await fetch('/settings/pdf-config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const result = await r.json();
+    this.textContent = result.success ? '✅ Saved!' : '❌ Error';
+  } catch(e) {
+    this.textContent = '❌ Error';
+  }
+  this.disabled = false;
+  setTimeout(() => {
+    this.textContent = '💾 Save PDF Configuration';
+  }, 2500);
+});

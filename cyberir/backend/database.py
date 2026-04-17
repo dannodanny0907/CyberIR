@@ -13,11 +13,70 @@ def get_db_connection():
 
 # Create database tables and schema if they do not exist
 def init_db():
-    if not os.path.exists(DATABASE_PATH):
-        with get_db_connection() as conn:
-            with open(os.path.join(BASE_DIR, 'schema.sql'), 'r') as f:
-                conn.executescript(f.read())
-            conn.commit()
+    with get_db_connection() as conn:
+        with open(os.path.join(BASE_DIR, 'schema.sql'), 'r') as f:
+            conn.executescript(f.read())
+        conn.commit()
+
+    # Add new columns safely (for existing databases)
+    new_columns = [
+        "detection_method TEXT",
+        "detection_method_other TEXT",
+        "contact_full_name TEXT",
+        "contact_job_title TEXT",
+        "contact_office TEXT",
+        "contact_work_phone TEXT",
+        "contact_mobile_phone TEXT",
+        "contact_additional TEXT",
+        "impact_selections TEXT",
+        "impact_other TEXT",
+        "impact_additional TEXT",
+        "data_sensitivity_selections TEXT",
+        "data_sensitivity_other TEXT",
+        "data_sensitivity_additional TEXT",
+        "detected_datetime TIMESTAMP",
+        "incident_occurred_datetime TIMESTAMP",
+        "attack_source TEXT",
+        "affected_system_ips TEXT",
+        "attack_source_ips TEXT",
+        "affected_system_functions TEXT",
+        "affected_system_os TEXT",
+        "affected_system_location TEXT",
+        "affected_system_security_software TEXT",
+        "affected_systems_count INTEGER DEFAULT 1",
+        "third_parties_involved TEXT",
+        "incident_type_other TEXT",
+        "escalated_to_cirt BOOLEAN DEFAULT 0",
+        "cirt_status TEXT DEFAULT 'Assigned'",
+        "cirt_resolution_notes TEXT",
+        "cirt_resolved_date TIMESTAMP"
+    ]
+    
+    with get_db_connection() as conn:
+        for column in new_columns:
+            try:
+                conn.execute(f"ALTER TABLE incidents ADD COLUMN {column}")
+            except sqlite3.OperationalError:
+                pass # Column already exists
+        conn.commit()
+    
+    create_default_settings()
+    create_default_admin()
+
+
+def create_default_settings():
+    with get_db_connection() as conn:
+        settings_to_insert = [
+            ('pdf_cybersecurity_engineer', 'CHABVUTAGONDO .T.', 'string'),
+            ('pdf_technical_services_manager', 'MUCHOVO .R.', 'string'),
+            ('pdf_footer_address', 'Chinhoyi University of Technology - ICT Department, Private Bag 7724, Chinhoyi, Zimbabwe | +263 67 2127433 | Cybersecurity Office: Ext 1175', 'string')
+        ]
+        for key, value, s_type in settings_to_insert:
+            conn.execute('''
+                INSERT OR IGNORE INTO settings (setting_key, setting_value, setting_type)
+                VALUES (?, ?, ?)
+            ''', (key, value, s_type))
+        conn.commit()
 
 # Handle logic for get_next_incident_id
 def get_next_incident_id():

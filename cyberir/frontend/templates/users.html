@@ -119,6 +119,7 @@
                 <select id="role" name="role" required class="form-input" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color);">
                     <option value="Analyst">Analyst</option>
                     <option value="Viewer">Viewer</option>
+                            <option value="CIRT">CIRT</option>
                 </select>
             </div>
             
@@ -167,3 +168,27 @@
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/users.js') }}"></script>
 {% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelects = document.querySelectorAll('select[name="role"]');
+    roleSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const form = this.closest('form');
+            const adminCheckGroup = form.querySelector('input[name="has_admin_privileges"]').closest('.checkbox-group');
+            const desc = form.querySelector('#roleDesc') || form.querySelector('.role-desc');
+            
+            if (this.value === 'CIRT') {
+                adminCheckGroup.style.display = 'none';
+                form.querySelector('input[name="has_admin_privileges"]').checked = false;
+                if (desc) desc.textContent = "CIRT: Access to escalated incidents (Major/Catastrophic) only";
+            } else {
+                adminCheckGroup.style.display = 'flex';
+                if (desc) desc.textContent = "";
+            }
+        });
+        // trigger once
+        select.dispatchEvent(new Event('change'));
+    });
+});
+</script>

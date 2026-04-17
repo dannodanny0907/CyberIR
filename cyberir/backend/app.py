@@ -7,8 +7,33 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
+
+try:
+    from weasyprint import HTML as WeasyHTML
+    PDF_LIBRARY = 'weasyprint'
+except (ImportError, Exception):
+    try:
+        from xhtml2pdf import pisa
+        PDF_LIBRARY = 'xhtml2pdf'
+    except ImportError:
+        PDF_LIBRARY = None
+
+def generate_pdf_from_html(html_string):
+    if PDF_LIBRARY == 'weasyprint':
+        pdf_bytes = WeasyHTML(string=html_string).write_pdf()
+        return pdf_bytes
+    elif PDF_LIBRARY == 'xhtml2pdf':
+        from io import BytesIO
+        result = BytesIO()
+        pisa.CreatePDF(html_string, dest=result)
+        return result.getvalue()
+    else:
+        return None
+
+import csv
+from io import StringIO, BytesIO
 from flask import (Flask, render_template,
-    redirect, url_for, flash, request, jsonify)
+    redirect, url_for, flash, request, jsonify, Response)
 from flask_login import (login_required, current_user)
 from auth import auth, login_manager
 from database import (get_db_connection, init_db,
@@ -24,6 +49,10 @@ app.secret_key = 'cyberir-secret-key-2026'
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 app.register_blueprint(auth)
+
+def sanitize_input(val, max_len):
+    if not val: return ''
+    return str(val).strip()[:max_len]
 
 @app.context_processor
 # Inject common variables like unread alert count into all templates
@@ -81,6 +110,9 @@ def login_page():
 @login_required
 # Render main dashboard with summary statistics and charts
 def dashboard():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     try:
         conn = get_db_connection()
         total_incidents = conn.execute(
@@ -96,7 +128,7 @@ def dashboard():
             "SELECT COUNT(*) as c FROM incidents WHERE status IN ('Resolved','Closed')"
         ).fetchone()['c']
         critical_incidents = conn.execute(
-            "SELECT COUNT(*) as c FROM incidents WHERE priority='Critical' AND status NOT IN ('Resolved','Closed')"
+            "SELECT COUNT(*) as c FROM incidents WHERE priority='Catastrophic' AND status NOT IN ('Resolved','Closed')"
         ).fetchone()['c']
         active_clusters = conn.execute(
             "SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'"
@@ -107,7 +139,7 @@ def dashboard():
         incidents_by_status = [dict(r) for r in conn.execute(
             "SELECT status, COUNT(*) as count FROM incidents GROUP BY status"
         ).fetchall()]
-        incidents_by_priority = [dict(r) for r in conn.execute(
+        incidents_by_severity = [dict(r) for r in conn.execute(
             "SELECT priority, COUNT(*) as count FROM incidents WHERE priority IS NOT NULL GROUP BY priority"
         ).fetchall()]
         incidents_by_type = [dict(r) for r in conn.execute(
@@ -153,7 +185,7 @@ def dashboard():
             active_clusters=active_clusters,
             total_correlated=total_correlated,
             incidents_by_status=incidents_by_status,
-            incidents_by_priority=incidents_by_priority,
+            incidents_by_severity=incidents_by_severity,
             incidents_by_type=incidents_by_type,
             daily_trend=daily_trend,
             resolution_by_type=resolution_by_type,
@@ -176,7 +208,7 @@ def dashboard():
             critical_incidents=0,
             active_clusters=0, total_correlated=0,
             incidents_by_status=[],
-            incidents_by_priority=[],
+            incidents_by_severity=[],
             incidents_by_type=[],
             daily_trend=[], resolution_by_type=[],
             top_incidents=[], recent_clusters=[],
@@ -188,16 +220,133 @@ def dashboard():
             today_count=0,
             active_page='dashboard')
 
-# ─── INCIDENTS ─────────────────────────────────
+# ─── CIRT INCIDENTS ─────────────────────────────
+
+@app.route('/cirt/incidents')
+@login_required
+def cirt_incidents():
+    if current_user.role != 'CIRT':
+        flash('Access denied. This page is for CIRT members only.', 'error')
+        return redirect(url_for('dashboard'))
+        
+    conn = get_db_connection()
+    status_filter = request.args.get('status', 'All Statuses')
+    severity_filter = request.args.get('severity', 'All Severities')
+    search_query = request.args.get('search', '').strip()
+    sort_raw = request.args.get('sort', 'detected_datetime')
+    order_raw = request.args.get('order', 'desc').lower()
+    
+    valid_sort_columns = ['incident_id', 'title', 'priority', 'status', 'risk_score', 'detected_datetime', 'reported_date']
+    sort_column = sort_raw if sort_raw in valid_sort_columns else 'detected_datetime'
+    order_dir = 'DESC' if order_raw != 'asc' else 'ASC'
+    
+    query = "SELECT *, priority AS severity FROM incidents WHERE escalated_to_cirt = 1"
+    params = []
+    
+    if status_filter != 'All Statuses':
+        if status_filter in ['Resolved', 'Closed']:
+            query += " AND status = ?"
+            params.append(status_filter)
+        elif status_filter in ['Open', 'Investigating']:
+            query += " AND status = ?"
+            params.append(status_filter)
+            
+    if severity_filter != 'All Severities':
+        query += " AND priority = ?"
+        params.append(severity_filter)
+        
+    if search_query:
+        query += " AND (incident_id LIKE ? OR title LIKE ?)"
+        params.extend([f"%{search_query}%", f"%{search_query}%"])
+        
+    query += f" ORDER BY {sort_column} {order_dir}"
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+    
+    count_query = query.replace('SELECT *, priority AS severity', 'SELECT COUNT(*) as c').split('ORDER BY')[0]
+    total_count = conn.execute(count_query, params).fetchone()['c']
+    total_pages = (total_count + per_page - 1) // per_page
+    
+    query += f" LIMIT ? OFFSET ?"
+    params.extend([per_page, offset])
+    
+    incidents = conn.execute(query, params).fetchall()
+    
+    # Stats
+    total_cirt = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE escalated_to_cirt = 1").fetchone()['c']
+    catastrophic_count = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority = 'Catastrophic' AND escalated_to_cirt = 1").fetchone()['c']
+    major_count = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority = 'Major' AND escalated_to_cirt = 1").fetchone()['c']
+    open_cirt = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE escalated_to_cirt = 1 AND status IN ('Open', 'Investigating')").fetchone()['c']
+    
+    conn.close()
+    
+    return render_template('cirt_incidents.html',
+                         active_page='cirt_incidents',
+                         incidents=incidents,
+                         total_cirt=total_cirt,
+                         catastrophic_count=catastrophic_count,
+                         major_count=major_count,
+                         open_cirt=open_cirt,
+                         status=status_filter,
+                         severity=severity_filter,
+                         search=search_query,
+                         sort=sort_column,
+                         order=order_raw,
+                         page=page,
+                         per_page=per_page,
+                         total_count=total_count,
+                         total_pages=total_pages)
+
+
+@app.route('/cirt/incidents/export')
+@login_required
+def export_cirt_incidents():
+    if current_user.role != 'CIRT':
+        return redirect(url_for('cirt_incidents'))
+        
+    conn = get_db_connection()
+    incidents = conn.execute("SELECT * FROM incidents WHERE escalated_to_cirt = 1 ORDER BY reported_date DESC").fetchall()
+    conn.close()
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['incident_id', 'title', 'incident_type', 'priority', 'status', 'risk_score', 'affected_asset', 'affected_department', 'detected_datetime', 'reported_date', 'assigned_name'])
+    
+    for inc in incidents:
+        cw.writerow([
+            inc['incident_id'],
+            inc['title'],
+            inc['incident_type'],
+            inc['priority'],
+            inc['status'],
+            inc['risk_score'],
+            inc['affected_asset'],
+            inc['affected_department'],
+            inc['detected_datetime'],
+            inc['reported_date'],
+            inc['assigned_to'] # mapped to name ideally, but let's just dump what's there
+        ])
+        
+    output = si.getvalue()
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=cirt_incidents_export.csv"}
+    )
+
 
 @app.route('/incidents')
 @login_required
-# Display paginated list of all incidents with optional filters
 def incidents():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     try:
         conn = get_db_connection()
         status_filter = request.args.get('status','')
-        priority_filter = request.args.get('priority','')
+        severity_filter = request.args.get('severity','')
         type_filter = request.args.get('incident_type','')
         search = request.args.get('search','')
         sort = request.args.get('sort','reported_date')
@@ -211,9 +360,9 @@ def incidents():
         if status_filter and status_filter not in ('', 'All Statuses'):
             where_clauses.append("i.status=?")
             params.append(status_filter)
-        if priority_filter and priority_filter not in ('', 'All Priorities'):
+        if severity_filter and severity_filter not in ('', 'All Priorities'):
             where_clauses.append("i.priority=?")
-            params.append(priority_filter)
+            params.append(severity_filter)
         if type_filter and type_filter not in ('', 'All Types'):
             where_clauses.append("i.incident_type=?")
             params.append(type_filter)
@@ -271,7 +420,50 @@ def log_incident():
         conn = get_db_connection()
         if request.method == 'POST':
             title = request.form.get('title','').strip()
-            incident_type = request.form.get('incident_type','')
+            
+            # Contact Information
+            contact_full_name = sanitize_input(request.form.get('contact_full_name'), 200)
+            contact_job_title = sanitize_input(request.form.get('contact_job_title'), 200)
+            contact_office = sanitize_input(request.form.get('contact_office'), 200)
+            contact_work_phone = sanitize_input(request.form.get('contact_work_phone'), 50)
+            contact_mobile_phone = sanitize_input(request.form.get('contact_mobile_phone'), 50)
+            contact_additional = sanitize_input(request.form.get('contact_additional'), 500)
+            
+            # Detection Method
+            detection_method = sanitize_input(request.form.get('detection_method'), 100)
+            detection_method_other = sanitize_input(request.form.get('detection_method_other'), 200)
+            
+            # Incident Type
+            incident_type_list = request.form.getlist('incident_type')
+            incident_type = ', '.join(incident_type_list) if incident_type_list else ''
+            incident_type_other = sanitize_input(request.form.get('incident_type_other'), 200)
+
+            # Impact of Incident
+            impact_list = request.form.getlist('impact_selections')
+            impact_selections = ', '.join(impact_list) if impact_list else None
+            impact_other = sanitize_input(request.form.get('impact_other'), 200)
+            impact_additional = sanitize_input(request.form.get('impact_additional'), 1000)
+
+            # Data Sensitivity
+            sensitivity_list = request.form.getlist('data_sensitivity_selections')
+            data_sensitivity_selections = ', '.join(sensitivity_list) if sensitivity_list else None
+            data_sensitivity_other = sanitize_input(request.form.get('data_sensitivity_other'), 200)
+            data_sensitivity_additional = sanitize_input(request.form.get('data_sensitivity_additional'), 1000)
+
+            # Systems Affected
+            detected_datetime = request.form.get('detected_datetime') or None
+            incident_occurred_datetime = request.form.get('incident_occurred_datetime') or None
+            attack_source = sanitize_input(request.form.get('attack_source'), 20)
+            affected_system_ips = sanitize_input(request.form.get('affected_system_ips'), 500)
+            attack_source_ips = sanitize_input(request.form.get('attack_source_ips'), 500)
+            affected_system_functions = sanitize_input(request.form.get('affected_system_functions'), 500)
+            affected_system_os = sanitize_input(request.form.get('affected_system_os'), 500)
+            affected_system_location = sanitize_input(request.form.get('affected_system_location'), 500)
+            affected_system_security_software = sanitize_input(request.form.get('affected_system_security_software'), 500)
+            affected_systems_count_val = request.form.get('affected_systems_count')
+            affected_systems_count = int(affected_systems_count_val) if affected_systems_count_val and affected_systems_count_val.isdigit() else None
+            third_parties_involved = sanitize_input(request.form.get('third_parties_involved'), 500)
+
             description = request.form.get('description','')
             affected_asset = request.form.get('affected_asset','').strip()
             affected_department = request.form.get('affected_department','')
@@ -288,14 +480,25 @@ def log_incident():
             ua = (1 if users_affected==0 else 2 if users_affected<=5 else 3 if users_affected<=20 else 4 if users_affected<=100 else 5)
             raw = (asset_criticality*0.30 + threat_severity*0.30 + vulnerability_exposure*0.15 + ua*0.20 + (5 if is_repeat else 1)*0.05)
             risk_score = round((raw/5)*100,2)
-            priority = ('Critical' if risk_score>=75 else 'High' if risk_score>=50 else 'Medium' if risk_score>=25 else 'Low')
+            severity = ('Catastrophic' if risk_score>=75 else 'Major' if risk_score>=50 else 'Moderate' if risk_score>=25 else 'Minor')
             from database import get_next_incident_id
             incident_id = get_next_incident_id()
             cursor = conn.execute(
-                "INSERT INTO incidents (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,status,assigned_to,reported_date,resolution_notes,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Open',?,?,?,?,datetime('now'),datetime('now'))",
-                (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,assigned_to,reported_date,resolution_notes,current_user.id))
+                "INSERT INTO incidents (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,severity,status,assigned_to,reported_date,resolution_notes,created_by,created_at,updated_at, contact_full_name, contact_job_title, contact_office, contact_work_phone, contact_mobile_phone, contact_additional, detection_method, detection_method_other, incident_type_other, impact_selections, impact_other, impact_additional, data_sensitivity_selections, data_sensitivity_other, data_sensitivity_additional, detected_datetime, incident_occurred_datetime, attack_source, affected_system_ips, attack_source_ips, affected_system_functions, affected_system_os, affected_system_location, affected_system_security_software, affected_systems_count, third_parties_involved) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Open',?,?,?,?,datetime('now'),datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,severity,assigned_to,reported_date,resolution_notes,current_user.id, contact_full_name, contact_job_title, contact_office, contact_work_phone, contact_mobile_phone, contact_additional, detection_method, detection_method_other, incident_type_other, impact_selections, impact_other, impact_additional, data_sensitivity_selections, data_sensitivity_other, data_sensitivity_additional, detected_datetime, incident_occurred_datetime, attack_source, affected_system_ips, attack_source_ips, affected_system_functions, affected_system_os, affected_system_location, affected_system_security_software, affected_systems_count, third_parties_involved))
             new_id = cursor.lastrowid
             conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'CREATE_INCIDENT','Incident',?,?)",[current_user.id,new_id,f"Created new incident {incident_id}: {title}"])
+            
+            if severity in ['Major', 'Catastrophic']:
+                conn.execute('UPDATE incidents SET escalated_to_cirt = 1 WHERE id = ?', [new_id])
+                cirt_users = conn.execute("SELECT id FROM users WHERE role = 'CIRT' AND is_active = 1").fetchall()
+                for cirt_user in cirt_users:
+                    conn.execute(
+                        '''INSERT INTO alerts
+                           (alert_type, severity, message, incident_id, recipient_id, is_read)
+                           VALUES (?,?,?,?,?,0)''',
+                        ('ESCALATION', 'CRITICAL', f'Incident {incident_id} has been escalated to CIRT — Severity: {severity}', new_id, cirt_user['id'])
+                    )
             conn.commit()
             conn.close()
             try:
@@ -316,9 +519,72 @@ def log_incident():
         flash('Error logging incident.','error')
         return redirect(url_for('incidents'))
 
+@app.route('/incidents/pdf-data/<incident_id>')
+@login_required
+def get_pdf_data(incident_id):
+    conn = get_db_connection()
+    incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?", [incident_id]).fetchone()
+    if not incident:
+        conn.close()
+        return jsonify({"success": False, "message": "Incident not found"}), 404
+        
+    user_row = conn.execute("SELECT full_name FROM users WHERE id=?", [incident['assigned_to']]).fetchone()
+    assigned_name = user_row['full_name'] if user_row else ''
+    
+    eng = conn.execute("SELECT setting_value FROM settings WHERE setting_key='pdf_cybersecurity_engineer'").fetchone()
+    mgr = conn.execute("SELECT setting_value FROM settings WHERE setting_key='pdf_technical_services_manager'").fetchone()
+    conn.close()
+    
+    return jsonify({
+        "success": True,
+        "incident": dict(incident),
+        "assigned_name": assigned_name,
+        "default_engineer": eng['setting_value'] if eng else 'CHABVUTAGONDO .T.',
+        "default_manager": mgr['setting_value'] if mgr else 'MUCHOVO .R.'
+    })
+
+@app.route('/incidents/generate-pdf/<incident_id>', methods=['POST'])
+@login_required
+def generate_pdf(incident_id):
+    data = request.json
+    engineer_name = data.get('engineer_name', '')
+    manager_name = data.get('manager_name', '')
+    
+    conn = get_db_connection()
+    incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?", [incident_id]).fetchone()
+    user_row = conn.execute("SELECT full_name FROM users WHERE id=?", [incident['assigned_to']]).fetchone() if incident and incident['assigned_to'] else None
+    assigned_name = user_row['full_name'] if user_row else ''
+    conn.close()
+    
+    if not incident:
+        return jsonify({"success": False, "message": "Not found"}), 404
+        
+    html_content = render_template('incident_pdf.html',
+        incident=dict(incident),
+        assigned_name=assigned_name,
+        engineer_name=engineer_name,
+        manager_name=manager_name
+    )
+    
+    pdf_bytes = generate_pdf_from_html(html_content)
+    if pdf_bytes is None:
+        return jsonify({"success": False, "message": "PDF library not installed"}), 500
+        
+    return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'attachment; filename="{incident_id}_report.pdf"'})
+
+@app.template_filter('format_date')
+def format_date_filter(value):
+    if not value: return '—'
+    try:
+        from datetime import datetime
+        if isinstance(value, str): dt = datetime.fromisoformat(value.replace('Z',''))
+        else: dt = value
+        return dt.strftime('%d %B %Y, %H:%M')
+    except:
+        return str(value)
+
 @app.route('/incidents/<incident_id>')
 @login_required
-# Retrieve and display comprehensive details for a specific incident
 def incident_detail(incident_id):
     try:
         conn = get_db_connection()
@@ -395,7 +661,50 @@ def edit_incident(incident_id):
             return redirect(url_for('incidents'))
         if request.method == 'POST':
             title = request.form.get('title','').strip()
-            incident_type = request.form.get('incident_type','')
+            
+            # Contact Information
+            contact_full_name = sanitize_input(request.form.get('contact_full_name'), 200)
+            contact_job_title = sanitize_input(request.form.get('contact_job_title'), 200)
+            contact_office = sanitize_input(request.form.get('contact_office'), 200)
+            contact_work_phone = sanitize_input(request.form.get('contact_work_phone'), 50)
+            contact_mobile_phone = sanitize_input(request.form.get('contact_mobile_phone'), 50)
+            contact_additional = sanitize_input(request.form.get('contact_additional'), 500)
+            
+            # Detection Method
+            detection_method = sanitize_input(request.form.get('detection_method'), 100)
+            detection_method_other = sanitize_input(request.form.get('detection_method_other'), 200)
+            
+            # Incident Type
+            incident_type_list = request.form.getlist('incident_type')
+            incident_type = ', '.join(incident_type_list) if incident_type_list else ''
+            incident_type_other = sanitize_input(request.form.get('incident_type_other'), 200)
+
+            # Impact of Incident
+            impact_list = request.form.getlist('impact_selections')
+            impact_selections = ', '.join(impact_list) if impact_list else None
+            impact_other = sanitize_input(request.form.get('impact_other'), 200)
+            impact_additional = sanitize_input(request.form.get('impact_additional'), 1000)
+
+            # Data Sensitivity
+            sensitivity_list = request.form.getlist('data_sensitivity_selections')
+            data_sensitivity_selections = ', '.join(sensitivity_list) if sensitivity_list else None
+            data_sensitivity_other = sanitize_input(request.form.get('data_sensitivity_other'), 200)
+            data_sensitivity_additional = sanitize_input(request.form.get('data_sensitivity_additional'), 1000)
+
+            # Systems Affected
+            detected_datetime = request.form.get('detected_datetime') or None
+            incident_occurred_datetime = request.form.get('incident_occurred_datetime') or None
+            attack_source = sanitize_input(request.form.get('attack_source'), 20)
+            affected_system_ips = sanitize_input(request.form.get('affected_system_ips'), 500)
+            attack_source_ips = sanitize_input(request.form.get('attack_source_ips'), 500)
+            affected_system_functions = sanitize_input(request.form.get('affected_system_functions'), 500)
+            affected_system_os = sanitize_input(request.form.get('affected_system_os'), 500)
+            affected_system_location = sanitize_input(request.form.get('affected_system_location'), 500)
+            affected_system_security_software = sanitize_input(request.form.get('affected_system_security_software'), 500)
+            affected_systems_count_val = request.form.get('affected_systems_count')
+            affected_systems_count = int(affected_systems_count_val) if affected_systems_count_val and affected_systems_count_val.isdigit() else None
+            third_parties_involved = sanitize_input(request.form.get('third_parties_involved'), 500)
+
             description = request.form.get('description','')
             affected_asset = request.form.get('affected_asset','').strip()
             affected_department = request.form.get('affected_department','')
@@ -411,10 +720,10 @@ def edit_incident(incident_id):
             ua = (1 if users_affected==0 else 2 if users_affected<=5 else 3 if users_affected<=20 else 4 if users_affected<=100 else 5)
             raw = (asset_criticality*0.30 + threat_severity*0.30 + vulnerability_exposure*0.15 + ua*0.20 + (5 if is_repeat else 1)*0.05)
             risk_score = round((raw/5)*100,2)
-            priority = ('Critical' if risk_score>=75 else 'High' if risk_score>=50 else 'Medium' if risk_score>=25 else 'Low')
+            severity = ('Catastrophic' if risk_score>=75 else 'Major' if risk_score>=50 else 'Moderate' if risk_score>=25 else 'Minor')
             conn.execute(
                 "UPDATE incidents SET title=?,description=?,incident_type=?,affected_asset=?,affected_department=?,users_affected=?,ip_address=?,attack_indicators=?,asset_criticality=?,threat_severity=?,vulnerability_exposure=?,is_repeat=?,risk_score=?,priority=?,assigned_to=?,reported_date=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
-                (title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,assigned_to,reported_date,current_user.id,incident_id))
+                (title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,severity,assigned_to,reported_date,current_user.id, contact_full_name, contact_job_title, contact_office, contact_work_phone, contact_mobile_phone, contact_additional, detection_method, detection_method_other, incident_type_other, impact_selections, impact_other, impact_additional, data_sensitivity_selections, data_sensitivity_other, data_sensitivity_additional, detected_datetime, incident_occurred_datetime, attack_source, affected_system_ips, attack_source_ips, affected_system_functions, affected_system_os, affected_system_location, affected_system_security_software, affected_systems_count, third_parties_involved, incident_id))
             
             changes = []
             if incident['title'] != title: changes.append('title')
@@ -422,7 +731,7 @@ def edit_incident(incident_id):
             if str(incident['assigned_to'] or '') != str(assigned_to or ''):
                 u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone() if assigned_to else None
                 changes.append(f"reassigned to {u['full_name'] if u else 'Unassigned'}")
-            if incident['priority'] != priority: changes.append(f'priority to {priority}')
+            if incident['severity'] != severity: changes.append(f'priority to {severity}')
             if incident['status'] != 'Open' and not changes: changes.append('general details')
             
             diff_text = f"Updated incident {incident['incident_id']}: modified " + ", ".join(changes) if changes else f"Updated incident {incident_id}"
@@ -508,6 +817,8 @@ def resolve_incident(incident_id):
 @login_required
 # Permanently remove an incident and its associated alerts
 def delete_incident(incident_id):
+    if current_user.role == 'CIRT':
+        return jsonify({"success": False, "message": "CIRT members cannot delete incidents"}), 403
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
     try:
@@ -565,6 +876,9 @@ def apply_solution(incident_id):
 @login_required
 # List active incident correlation clusters
 def correlation():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     try:
         conn = get_db_connection()
         clusters = conn.execute("SELECT * FROM incident_clusters ORDER BY last_updated DESC").fetchall()
@@ -602,7 +916,7 @@ def correlation_detail(cluster_id):
             return redirect(url_for('correlation'))
         cluster = dict(cluster)
         cluster['incident_count'] = int(cluster.get('incident_count') or 0)
-        cluster['severity'] = cluster.get('severity') or 'Medium'
+        cluster['severity'] = cluster.get('severity') or 'Moderate'
         cluster['status'] = cluster.get('status') or 'Active'
         cluster['notes'] = cluster.get('notes') or ''
         incidents_in = conn.execute("SELECT i.*, u.full_name as assigned_name FROM incidents i LEFT JOIN users u ON i.assigned_to=u.id WHERE i.cluster_id=? ORDER BY i.reported_date ASC",[cluster_id]).fetchall()
@@ -692,6 +1006,9 @@ def add_cluster_note(cluster_id):
 @login_required
 # Display instances of similar incidents across the database
 def similarity():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     try:
         conn = get_db_connection()
         rows = conn.execute("""
@@ -710,7 +1027,7 @@ def similarity():
         for r in rows:
             d = dict(r)
             d['similarity_score'] = float(d.get('similarity_score') or 0.0)
-            d['priority'] = d.get('priority') or 'Low'
+            d['severity'] = d.get('priority') or 'Minor'
             d['status'] = d.get('status') or 'Open'
             d['similar_status'] = d.get('similar_status') or 'Unknown'
             d['title'] = d.get('title') or 'Untitled'
@@ -768,13 +1085,13 @@ def alerts():
         ).fetchall()
         total_count  = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
         unread_count = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
-        critical_count = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND severity='CRITICAL' AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
+        catastrophic_count = conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND severity='CRITICAL' AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c']
         conn.close()
         return render_template('alerts.html',
             alerts=alerts_list,
             total_count=total_count,
             unread_count=unread_count,
-            critical_count=critical_count,
+            catastrophic_count=catastrophic_count,
             page=page,
             per_page=per_page,
             active_page='alerts')
@@ -833,6 +1150,9 @@ def dismiss_all_read_alerts():
 @login_required
 # Render the reporting interface for KPI generation with optional filters
 def reports():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     if current_user.role != 'Admin' and not current_user.has_admin_privileges:
         flash('Access denied.', 'error')
         return redirect(url_for('dashboard'))
@@ -841,12 +1161,12 @@ def reports():
 
         # Read URL filter params
         status_filter   = request.args.get('status', '').strip()
-        priority_filter = request.args.get('priority', '').strip()
+        severity_filter = request.args.get('severity', '').strip()
         type_filter     = request.args.get('type', '').strip()
 
         active_filters = {
             'status':   status_filter,
-            'priority': priority_filter,
+            'priority': severity_filter,
             'type':     type_filter,
         }
 
@@ -863,9 +1183,9 @@ def reports():
         if status_filter:
             inc_query += " AND i.status = ?"
             inc_params.append(status_filter)
-        if priority_filter:
+        if severity_filter:
             inc_query += " AND i.priority = ?"
-            inc_params.append(priority_filter)
+            inc_params.append(severity_filter)
         if type_filter:
             inc_query += " AND i.incident_type = ?"
             inc_params.append(type_filter)
@@ -891,10 +1211,10 @@ def reports():
             'resolved_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Resolved'").fetchone()['c'],
             'closed_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Closed'").fetchone()['c'],
             'avg_resolution_time':        conn.execute("SELECT AVG(resolution_time_minutes) as a FROM incidents WHERE resolution_time_minutes IS NOT NULL").fetchone()['a'] or 0,
-            'critical_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical'").fetchone()['c'],
-            'high_count':                 conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='High'").fetchone()['c'],
-            'medium_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Medium'").fetchone()['c'],
-            'low_count':                  conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Low'").fetchone()['c'],
+            'catastrophic_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Catastrophic'").fetchone()['c'],
+            'major_count':                 conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Major'").fetchone()['c'],
+            'moderate_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Moderate'").fetchone()['c'],
+            'minor_count':                  conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Minor'").fetchone()['c'],
         }
 
         recent_activity = conn.execute(
@@ -922,7 +1242,7 @@ def export_incidents():
     from flask import Response
 
     status_filter   = request.args.get('status', '').strip()
-    priority_filter = request.args.get('priority', '').strip()
+    severity_filter = request.args.get('severity', '').strip()
     type_filter     = request.args.get('type', '').strip()
 
     conn = get_db_connection()
@@ -940,9 +1260,9 @@ def export_incidents():
     if status_filter:
         query += " AND i.status = ?"
         params.append(status_filter)
-    if priority_filter:
+    if severity_filter:
         query += " AND i.priority = ?"
-        params.append(priority_filter)
+        params.append(severity_filter)
     if type_filter:
         query += " AND i.incident_type = ?"
         params.append(type_filter)
@@ -962,7 +1282,7 @@ def export_incidents():
 
     parts = ['incidents']
     if status_filter:   parts.append(status_filter)
-    if priority_filter: parts.append(priority_filter)
+    if severity_filter: parts.append(severity_filter)
     if type_filter:     parts.append(type_filter.replace(' ', '_'))
     filename = '_'.join(parts) + '_export.csv'
 
@@ -1003,10 +1323,36 @@ def export_activity():
 
 # ─── SETTINGS ──────────────────────────────────
 
+@app.route('/settings/pdf-config', methods=['POST'])
+@login_required
+def save_pdf_config():
+    if current_user.role != 'Admin':
+        return jsonify({"success": False, "message": "Access denied"}), 403
+    data = request.json
+    engineer = data.get('pdf_cybersecurity_engineer', '')
+    manager = data.get('pdf_technical_services_manager', '')
+    
+    conn = get_db_connection()
+    # update or insert
+    for k, v in [('pdf_cybersecurity_engineer', engineer), ('pdf_technical_services_manager', manager)]:
+        row = conn.execute("SELECT setting_key FROM settings WHERE setting_key=?", [k]).fetchone()
+        if row:
+            conn.execute("UPDATE settings SET setting_value=? WHERE setting_key=?", [v, k])
+        else:
+            conn.execute("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)", [k, v])
+            
+    conn.execute("INSERT INTO activity_logs (user_id, action_type, target_type, details) VALUES (?, 'UPDATE_SETTINGS', 'Settings', 'Updated PDF Configuration')", [current_user.id])
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
 @app.route('/settings')
 @login_required
-# Render the system settings and configuration panel
 def settings():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     if current_user.role != 'Admin':
         flash('Access denied.','error')
         return redirect(url_for('dashboard'))
@@ -1147,6 +1493,9 @@ def test_similarity():
 @login_required
 # Render the user management interface for administrators
 def users():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     if current_user.role != 'Admin':
         flash('Access denied.','error')
         return redirect(url_for('dashboard'))
@@ -1166,6 +1515,9 @@ def users():
 @login_required
 # Register a new user account into the system
 def add_user():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
     if current_user.role != 'Admin':
         return jsonify({'success':False,'message':'Admin only'})
     try:
@@ -1455,7 +1807,7 @@ def api_dashboard_stats():
         data = {
             'active_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
             'open_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c'],
-            'critical_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Critical' AND status NOT IN ('Resolved','Closed')").fetchone()['c'],
+            'critical_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Catastrophic' AND status NOT IN ('Resolved','Closed')").fetchone()['c'],
             'total_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
             'unread_alerts': conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c'],
             'total_similarity_matches': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c'],

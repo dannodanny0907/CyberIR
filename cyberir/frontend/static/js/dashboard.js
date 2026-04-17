@@ -42,15 +42,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('statusChart').style.cursor = 'pointer';
 
-    // Priority Doughnut Chart
+    // Severity Doughnut Chart
     const priorityDataRaw = document.getElementById('priorityData').textContent;
     const priorityData = JSON.parse(priorityDataRaw);
     
     const priorityColors = {
-        'Critical': '#dc2626',
-        'High': '#ea580c',
-        'Medium': '#2563eb',
-        'Low': '#16a34a'
+        'Catastrophic': '#dc2626',
+        'Major': '#ea580c',
+        'Moderate': '#2563eb',
+        'Minor': '#16a34a'
     };
     
     const priorityChart = new Chart(document.getElementById('priorityChart'), {

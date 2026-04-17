@@ -137,10 +137,10 @@ def run_correlation(new_incident_id):
             incidents_in_cluster = conn.execute('SELECT priority, incident_type, affected_department FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
             priorities = [i['priority'] for i in incidents_in_cluster]
             
-            if 'Critical' in priorities: severity = 'Critical'
-            elif 'High' in priorities: severity = 'High'
-            elif 'Medium' in priorities: severity = 'Medium'
-            else: severity = 'Low'
+            if 'Catastrophic' in priorities: severity = 'Catastrophic'
+            elif 'Major' in priorities: severity = 'Major'
+            elif 'Moderate' in priorities: severity = 'Moderate'
+            else: severity = 'Minor'
             
             types = [i['incident_type'] for i in incidents_in_cluster]
             primary_type = Counter(types).most_common(1)[0][0] if types else 'Unknown'
@@ -168,10 +168,10 @@ def run_correlation(new_incident_id):
         elif action == "joined":
             incidents_in_cluster = conn.execute('SELECT priority FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
             priorities = [i['priority'] for i in incidents_in_cluster]
-            if 'Critical' in priorities: new_severity = 'Critical'
-            elif 'High' in priorities: new_severity = 'High'
-            elif 'Medium' in priorities: new_severity = 'Medium'
-            else: new_severity = 'Low'
+            if 'Catastrophic' in priorities: new_severity = 'Catastrophic'
+            elif 'Major' in priorities: new_severity = 'Major'
+            elif 'Moderate' in priorities: new_severity = 'Moderate'
+            else: new_severity = 'Minor'
             
             conn.execute('''
                 UPDATE incident_clusters SET
@@ -186,11 +186,11 @@ def run_correlation(new_incident_id):
         
         if count_val >= 2:
             clus_row = conn.execute('SELECT severity, primary_type, cluster_name FROM incident_clusters WHERE cluster_id = ?', (cluster_id,)).fetchone()
-            c_sev = clus_row['severity'] if clus_row else 'Medium'
+            c_sev = clus_row['severity'] if clus_row else 'Moderate'
             c_type = clus_row['primary_type'] if clus_row else 'Unknown'
             c_dept = clus_row['cluster_name'].split('—')[-1].strip() if clus_row and '—' in clus_row['cluster_name'] else 'Multiple'
             
-            alert_sev = 'CRITICAL' if c_sev in ['Critical', 'High'] else 'WARNING'
+            alert_sev = 'CRITICAL' if c_sev in ['Catastrophic', 'Major'] else 'WARNING'
             msg = f"Correlation detected: {count_val} related incidents grouped in cluster {cluster_id} ({c_type} — {c_dept})"
             
             conn.execute('''
@@ -228,10 +228,10 @@ def recalculate_cluster(cluster_id):
         return {"dissolved": True}
         
     priorities = [i['priority'] for i in incidents_in_cluster]
-    if 'Critical' in priorities: severity = 'Critical'
-    elif 'High' in priorities: severity = 'High'
-    elif 'Medium' in priorities: severity = 'Medium'
-    else: severity = 'Low'
+    if 'Catastrophic' in priorities: severity = 'Catastrophic'
+    elif 'Major' in priorities: severity = 'Major'
+    elif 'Moderate' in priorities: severity = 'Moderate'
+    else: severity = 'Minor'
     
     types = [i['incident_type'] for i in incidents_in_cluster]
     primary_type = Counter(types).most_common(1)[0][0] if types else 'Unknown'

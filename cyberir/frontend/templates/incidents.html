@@ -68,11 +68,11 @@
     </select>
 
     <select name="priority" class="filter-select">
-        <option value="All Priorities" {% if request.args.get('priority') == 'All Priorities' or not request.args.get('priority') %}selected{% endif %}>All Priorities</option>
-        <option value="Critical" {% if request.args.get('priority') == 'Critical' %}selected{% endif %}>Critical</option>
-        <option value="High" {% if request.args.get('priority') == 'High' %}selected{% endif %}>High</option>
-        <option value="Medium" {% if request.args.get('priority') == 'Medium' %}selected{% endif %}>Medium</option>
-        <option value="Low" {% if request.args.get('priority') == 'Low' %}selected{% endif %}>Low</option>
+        <option value="All Priorities" {% if request.args.get('priority') == 'All Priorities' or not request.args.get('priority') %}selected{% endif %}>All Severities</option>
+        <option value="Catastrophic" {% if request.args.get('priority') == 'Catastrophic' %}selected{% endif %}>Catastrophic</option>
+        <option value="Major" {% if request.args.get('priority') == 'Major' %}selected{% endif %}>Major</option>
+        <option value="Moderate" {% if request.args.get('priority') == 'Moderate' %}selected{% endif %}>Moderate</option>
+        <option value="Minor" {% if request.args.get('priority') == 'Minor' %}selected{% endif %}>Minor</option>
     </select>
 
     <select name="incident_type" class="filter-select">
@@ -158,9 +158,9 @@
                     <div style="font-weight: 600; font-size: 0.9rem;">{{ inc.risk_score }}</div>
                     <div class="risk-score-bar">
                         {% set color = '#16a34a' %}
-                        {% if inc.priority == 'Critical' %}{% set color = '#dc2626' %}
-                        {% elif inc.priority == 'High' %}{% set color = '#ea580c' %}
-                        {% elif inc.priority == 'Medium' %}{% set color = '#2563eb' %}{% endif %}
+                        {% if inc.priority == 'Catastrophic' %}{% set color = '#dc2626' %}
+                        {% elif inc.priority == 'Major' %}{% set color = '#ea580c' %}
+                        {% elif inc.priority == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
                         <div class="risk-score-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};"></div>
                     </div>
                 </td>

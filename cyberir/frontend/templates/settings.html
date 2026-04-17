@@ -105,28 +105,28 @@
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-critical" style="width: 75px; text-align: center;">Critical</span>
+            <span class="badge priority-critical" style="width: 75px; text-align: center;">Catastrophic</span>
             <input type="number" id="critical_sla" class="number-input" min="1" max="24" value="{{ settings.get('critical_sla_hours', 4) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="critSlaVal">{{ settings.get('critical_sla_hours', 4) }}</span> hour(s)</span>
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-high" style="width: 75px; text-align: center;">High</span>
+            <span class="badge priority-high" style="width: 75px; text-align: center;">Major</span>
             <input type="number" id="high_sla" class="number-input" min="1" max="168" value="{{ settings.get('high_sla_hours', 24) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="highSlaVal">{{ settings.get('high_sla_hours', 24) }}</span> hour(s)</span>
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-medium" style="width: 75px; text-align: center;">Medium</span>
+            <span class="badge priority-medium" style="width: 75px; text-align: center;">Moderate</span>
             <input type="number" id="medium_sla" class="number-input" min="1" max="720" value="{{ settings.get('medium_sla_hours', 72) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="medSlaVal">{{ settings.get('medium_sla_hours', 72) }}</span> hour(s)</span>
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-low" style="width: 75px; text-align: center;">Low</span>
+            <span class="badge priority-low" style="width: 75px; text-align: center;">Minor</span>
             <input type="number" id="low_sla" class="number-input" min="1" max="2160" value="{{ settings.get('low_sla_hours', 168) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="lowSlaVal">{{ settings.get('low_sla_hours', 168) }}</span> hour(s)</span>

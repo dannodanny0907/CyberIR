@@ -345,3 +345,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initSimilarityPanel();
 });
+
+// PDF Export logic
+document.getElementById('exportPdfBtn')?.addEventListener('click', async function() {
+    const incidentId = this.dataset.incidentId;
+    const modal = document.getElementById('pdfPreviewModal');
+    modal.style.display = 'flex';
+    
+    const r = await fetch('/incidents/pdf-data/' + incidentId);
+    const data = await r.json();
+    
+    document.getElementById('pdfEngineerName').value = data.default_engineer;
+    document.getElementById('pdfManagerName').value = data.default_manager;
+    
+    renderPdfPreview(data.incident, data.assigned_name, data.default_engineer, data.default_manager);
+});
+
+function renderPdfPreview(incident, assignedName, engineerName, managerName) {
+    const preview = document.getElementById('pdfPreviewContent');
+    preview.innerHTML = `
+    <div style="font-family:'Times New Roman',serif;font-size:11pt;color:#111;padding:8px">
+      <div style="text-align:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1a4731">
+        <strong style="font-size:13pt;color:#1a4731">CHINHOYI UNIVERSITY OF TECHNOLOGY</strong><br>
+        <strong>ICT — Cybersecurity Incident Report Form</strong>
+      </div>
+      <p><strong>Case Number:</strong> ${incident.incident_id} &nbsp;&nbsp; <strong>Date:</strong> ${incident.reported_date}<br>
+        <strong>Detection Method:</strong> ${incident.detection_method || '—'}</p><hr>
+      <strong>1. Contact Information</strong><p>Full Name: ${incident.contact_full_name || '—'}<br>
+         Job Title: ${incident.contact_job_title || '—'}<br>Office: ${incident.contact_office || '—'}<br>
+         Work Phone: ${incident.contact_work_phone || '—'}<br>Mobile: ${incident.contact_mobile_phone || '—'}</p><hr>
+      <strong>2. Incident Details</strong><p>Type: ${incident.incident_type || '—'}<br>Description: ${incident.description || '—'}</p><hr>
+      <strong>3. Impact</strong><p>${incident.impact_selections || '—'}</p><hr>
+      <strong>4. Data Sensitivity</strong><p>${incident.data_sensitivity_selections || '—'}</p><hr>
+      <strong>5. Systems Affected</strong><p>Attack Source: ${incident.attack_source || '—'}<br>
+         Affected IPs: ${incident.affected_system_ips || '—'}<br>OS: ${incident.affected_system_os || '—'}<br>
+         Location: ${incident.affected_system_location || '—'}</p><hr>
+      <strong>6. Risk Assessment</strong><p>Risk Score: ${incident.risk_score}/100<br>Severity: <strong>${incident.priority || incident.severity}</strong></p><hr>
+      <strong>7. Validation</strong><br><br><em>Officer Responsible:</em><br>
+      ${assignedName || '—'}&nbsp;&nbsp; ____________________________ Name / ____________________________ Sign / ________________ Date<br><br>
+      <em>Cybersecurity Engineer:</em><br><span id="previewEngineerName">${engineerName}</span>&nbsp;&nbsp;
+      ____________________________ Sign / ________________ Date<br><br>
+      <em>Technical Services Manager:</em><br><span id="previewManagerName">${managerName}</span>&nbsp;&nbsp;
+      ____________________________ Sign / ________________ Date
+    </div>`;
+}
+
+document.getElementById('pdfEngineerName')?.addEventListener('input', function() {
+    const span = document.getElementById('previewEngineerName');
+    if (span) span.textContent = this.value;
+});
+document.getElementById('pdfManagerName')?.addEventListener('input', function() {
+    const span = document.getElementById('previewManagerName');
+    if (span) span.textContent = this.value;
+});
+
+document.getElementById('downloadPdfBtn')?.addEventListener('click', async function() {
+    const incidentId = document.getElementById('exportPdfBtn').dataset.incidentId;
+    const engineerName = document.getElementById('pdfEngineerName').value;
+    const managerName = document.getElementById('pdfManagerName').value;
+    
+    this.textContent = '⏳ Generating...';
+    this.disabled = true;
+    
+    const r = await fetch('/incidents/generate-pdf/' + incidentId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ engineer_name: engineerName, manager_name: managerName })
+    });
+    
+    if (r.ok) {
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = incidentId + '_report.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+        closePdfModal();
+    } else {
+        alert('PDF generation failed.');
+    }
+    this.textContent = '⬇️ Download PDF';
+    this.disabled = false;
+});
+
+function closePdfModal() {
+    const m = document.getElementById('pdfPreviewModal');
+    if(m) m.style.display = 'none';
+}

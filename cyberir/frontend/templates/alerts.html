@@ -17,8 +17,8 @@
         {% if unread_count > 0 %}
         <span class="unread-badge" id="unreadBadge">{{ unread_count }} unread</span>
         {% endif %}
-        {% if critical_count > 0 %}
-        <span class="critical-badge" id="criticalBadge">{{ critical_count }} critical</span>
+        {% if catastrophic_count > 0 %}
+        <span class="critical-badge" id="criticalBadge">{{ catastrophic_count }} critical</span>
         {% endif %}
     </div>
     
@@ -54,7 +54,7 @@
         
         <select name="severity" class="filter-select" onchange="this.form.submit()">
             <option value="All Severities" {% if request.args.get('severity') == 'All Severities' or not request.args.get('severity') %}selected{% endif %}>All Severities</option>
-            <option value="Critical" {% if request.args.get('severity') == 'Critical' %}selected{% endif %}>Critical</option>
+            <option value="Catastrophic" {% if request.args.get('severity') == 'Catastrophic' %}selected{% endif %}>Catastrophic</option>
             <option value="Warning" {% if request.args.get('severity') == 'Warning' %}selected{% endif %}>Warning</option>
             <option value="Info" {% if request.args.get('severity') == 'Info' %}selected{% endif %}>Info</option>
         </select>
@@ -70,7 +70,7 @@
 <!-- ALERTS SUMMARY BAR -->
 {% if unread_count > 0 %}
 <div class="alerts-summary-bar">
-    You have {{ unread_count }} unread alert(s) — {{ critical_count }} require immediate attention
+    You have {{ unread_count }} unread alert(s) — {{ catastrophic_count }} require immediate attention
 </div>
 {% endif %}
 

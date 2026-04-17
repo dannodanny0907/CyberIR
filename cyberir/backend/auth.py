@@ -33,7 +33,10 @@ class User(UserMixin):
 # Handle login form submission and session setup
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        if current_user.role == 'CIRT':
+            return redirect(url_for('cirt_incidents'))
+        else:
+            return redirect(url_for('dashboard'))
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -75,7 +78,10 @@ def login():
                 [user.id])
             conn2.commit()
             conn2.close()
-            return redirect(url_for('dashboard'))
+            if user.role == 'CIRT':
+                return redirect(url_for('cirt_incidents'))
+            else:
+                return redirect(url_for('dashboard'))
         else:
             flash('Invalid email or password.',
                 'error')

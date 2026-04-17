@@ -48,22 +48,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const riskScore = ((rawScore / 5) * 100).toFixed(2);
         scoreDisplay.textContent = riskScore + '%';
         
-        let priority = '';
+        let severity = '';
+    const escalateWarn = (severity === "Major" || severity === "Catastrophic") ? `<div style="color: #dc2626; margin-top: 10px; font-weight: bold; font-size: 0.9rem;">⚠️ This incident will be escalated to CIRT</div>` : "";
         let color = '';
         let border = '';
         let bg = '';
         if (riskScore >= 75) {
-            priority = 'Critical'; color = '#dc2626'; border = '#fca5a5'; bg = '#fee2e2';
+            severity = 'Catastrophic'; color = '#dc2626'; border = '#fca5a5'; bg = '#fee2e2';
         } else if (riskScore >= 50) {
-            priority = 'High'; color = '#ea580c'; border = '#fdba74'; bg = '#ffedd5';
+            severity = 'Major'; color = '#ea580c'; border = '#fdba74'; bg = '#ffedd5';
         } else if (riskScore >= 25) {
-            priority = 'Medium'; color = '#2563eb'; border = '#bae6fd'; bg = '#e0f2fe';
+            severity = 'Moderate'; color = '#2563eb'; border = '#bae6fd'; bg = '#e0f2fe';
         } else {
-            priority = 'Low'; color = '#16a34a'; border = '#bbf7d0'; bg = '#dcfce7';
+            severity = 'Minor'; color = '#16a34a'; border = '#bbf7d0'; bg = '#dcfce7';
         }
         
-        priorityBadge.textContent = priority;
+        priorityBadge.textContent = severity;
         priorityBadge.style.color = color;
+        const warnId = 'cirt-escalation-warn'; let warnEl = document.getElementById(warnId); if(severity === 'Major' || severity === 'Catastrophic'){ if(!warnEl){ warnEl = document.createElement('div'); warnEl.id = warnId; warnEl.style.color = '#dc2626'; warnEl.style.marginTop = '10px'; warnEl.style.fontWeight = 'bold'; warnEl.style.fontSize = '0.9rem'; warnEl.textContent = '⚠️ This incident will be escalated to CIRT'; previewBox.appendChild(warnEl); } } else { if(warnEl) warnEl.remove(); }
         priorityBadge.style.borderColor = border;
         priorityBadge.style.backgroundColor = bg;
         previewBox.style.borderColor = border;
@@ -71,6 +73,64 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreDisplay.style.color = color;
     };
     
+    
+    // Detection method toggle
+    document.getElementById('detection_method')?.addEventListener('change', function() {
+        const otherContainer = document.getElementById('detection_method_other_container');
+        if (this.value === 'Other') {
+            otherContainer.classList.add('visible');
+            document.getElementById('detection_method_other').required = true;
+        } else {
+            otherContainer.classList.remove('visible');
+            document.getElementById('detection_method_other').required = false;
+        }
+    });
+
+    // Incident type toggle
+    document.getElementById('incident_type')?.addEventListener('change', function() {
+        const selectedOptions = Array.from(this.selectedOptions).map(opt => opt.value);
+        const otherContainer = document.getElementById('incident_type_other_container');
+        if (selectedOptions.includes('Unknown/Other')) {
+            otherContainer.classList.add('visible');
+            document.getElementById('incident_type_other').required = true;
+        } else {
+            otherContainer.classList.remove('visible');
+            document.getElementById('incident_type_other').required = false;
+        }
+    });
+
+    
+    // Impact of Incident toggle
+    document.getElementById('impact_selections')?.addEventListener('change', function() {
+        const selected = Array.from(this.selectedOptions).map(o => o.value);
+        const container = document.getElementById('impact_other_container');
+        if (selected.includes('Unknown/Other')) {
+            container.classList.add('visible');
+        } else {
+            container.classList.remove('visible');
+        }
+    });
+
+    // Data Sensitivity toggle
+    document.getElementById('data_sensitivity_selections')?.addEventListener('change', function() {
+        const selected = Array.from(this.selectedOptions).map(o => o.value);
+        const container = document.getElementById('data_sensitivity_other_container');
+        if (selected.includes('Unknown/Other')) {
+            container.classList.add('visible');
+        } else {
+            container.classList.remove('visible');
+        }
+    });
+
+    // Attack source radio buttons
+    document.querySelectorAll('.attack-source-label').forEach(label => {
+        label.addEventListener('click', function() {
+            document.querySelectorAll('.attack-source-btn').forEach(btn => btn.style.background = '');
+            this.querySelector('.attack-source-btn').style.background = '#2563eb';
+            this.querySelector('.attack-source-btn').style.color = 'white';
+        });
+    });
+
     // Attach event listeners
     [criticalityInput, severityInput, exposureInput, usersAffectedInput, isRepeatCheck].forEach(el => {
         if (el) el.addEventListener('input', calculateRisk);
@@ -126,13 +186,17 @@ function validateIncidentForm() {
         isValid = false
     }
 
-    // Incident type validation
-    const type = document.getElementById('incident_type')?.value
-    if (!type) {
-        showError('incident_type', 'Please select an incident type')
-        if (!firstError) firstError = 'incident_type'
-        isValid = false
+
+    // Multi-select incident type validation
+    const incidentTypeSelect = document.getElementById('incident_type');
+    if (incidentTypeSelect) {
+        const selectedTypes = Array.from(incidentTypeSelect.selectedOptions).map(o => o.value);
+        if (selectedTypes.length === 0) {
+            showError('incident_type', 'Please select at least one incident type');
+            isValid = false;
+        }
     }
+
 
     // Affected asset validation
     const asset = document.getElementById('affected_asset')?.value.trim()
