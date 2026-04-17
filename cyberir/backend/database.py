@@ -7,7 +7,7 @@ DATABASE_PATH = os.path.join(BASE_DIR, 'cyberir.db')
 
 # Establish and return a row-factory configured SQLite connection
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -59,9 +59,45 @@ def init_db():
             except sqlite3.OperationalError:
                 pass # Column already exists
         conn.commit()
-    
+
+    # Remove outdated CHECK constraint on incident_type by recreating the table
+    _remove_incident_type_check_constraint()
+
     create_default_settings()
     create_default_admin()
+
+
+def _remove_incident_type_check_constraint():
+    """Recreate incidents table without CHECK constraint on incident_type."""
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='incidents'"
+        ).fetchone()
+        if not row or 'CHECK' not in (row['sql'] or ''):
+            return
+
+        cols = [c[1] for c in conn.execute('PRAGMA table_info(incidents)').fetchall()]
+        col_list = ', '.join(cols)
+
+        conn.execute('PRAGMA foreign_keys=OFF')
+        conn.execute('DROP TABLE IF EXISTS incidents_backup')
+        conn.execute(f'CREATE TABLE incidents_backup AS SELECT {col_list} FROM incidents')
+        conn.execute('DROP TABLE incidents')
+
+        # Remove CHECK(...) clauses handling nested parentheses
+        create_sql = row['sql']
+        import re
+        # Match CHECK( ... ) with balanced parens (up to 2 levels deep)
+        create_sql = re.sub(
+            r',?\s*CHECK\s*\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\)',
+            '', create_sql, flags=re.IGNORECASE
+        )
+        conn.execute(create_sql)
+
+        conn.execute(f'INSERT INTO incidents ({col_list}) SELECT {col_list} FROM incidents_backup')
+        conn.execute('DROP TABLE incidents_backup')
+        conn.execute('PRAGMA foreign_keys=ON')
+        conn.commit()
 
 
 def create_default_settings():
