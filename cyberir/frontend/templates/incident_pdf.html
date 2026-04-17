@@ -11,9 +11,6 @@
     padding: 0;
   }
   .page {
-    width: 210mm;
-    min-height: 297mm;
-    padding: 15mm 20mm;
     box-sizing: border-box;
   }
   .header-table {
@@ -72,26 +69,26 @@
     padding: 6px 8px;
   }
   .field-row {
-    display: table;
+    display: block;
     width: 100%;
-    border-collapse: collapse;
     margin-bottom: 3px;
+    clear: both;
   }
   .field-label {
-    display: table-cell;
+    display: inline-block;
     font-weight: bold;
-    width: 45%;
+    width: 35%;
     font-size: 10pt;
     vertical-align: top;
     padding-right: 8px;
   }
   .field-value {
-    display: table-cell;
+    display: inline-block;
+    width: 60%;
     font-size: 10pt;
     vertical-align: top;
     border-bottom: 1px dotted #999;
     padding-bottom: 2px;
-    min-height: 16px;
   }
   /* Validation section */
   .validation-section {
@@ -115,8 +112,6 @@
     margin-bottom: 6px;
   }
   .sig-line-row {
-    display: flex;
-    gap: 20px;
     margin-top: 4px;
   }
   .sig-line {
@@ -162,8 +157,8 @@
       <td class="header-logo-cell">
         <!-- CUT Logo placeholder -->
         <div style="width:50px;height:50px;background:#1a4731;
-          border-radius:50%;display:flex;align-items:center;
-          justify-content:center;color:white;font-weight:bold;
+          border-radius:50%;text-align:center;line-height:50px;
+          color:white;font-weight:bold;
           font-size:14pt">CUT</div>
       </td>
       <td class="header-title-cell">
@@ -401,64 +396,74 @@
 
     <!-- Officer Responsible -->
     <div class="signatory-row">
-      <div class="signatory-title">
-        Officer Responsible for the affected system/s:</div>
-      <div class="sig-line-row">
-        <div style="flex:1">
-          <div style="font-size:10pt">
-            {{ assigned_name or '—' }}</div>
-          <div class="sig-line">Name</div>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:10pt">&nbsp;</div>
-          <div class="sig-line">Sign</div>
-        </div>
-        <div style="flex:0.5">
-          <div style="font-size:10pt">&nbsp;</div>
-          <div class="sig-line">Date</div>
-        </div>
-      </div>
+      <div class="signatory-title">Officer Responsible for the affected system/s:</div>
+      <table style="width:100%; border-collapse: collapse; margin-top: 4px;">
+        <tr>
+          <td style="width:40%; vertical-align:bottom;">
+            <div style="font-size:10pt">{{ assigned_name or '—' }}</div>
+            <div class="sig-line">Name</div>
+          </td>
+          <td style="width:10%;"></td>
+          <td style="width:35%; vertical-align:bottom;">
+            <div style="font-size:10pt">&nbsp;</div>
+            <div class="sig-line">Sign</div>
+          </td>
+          <td style="width:5%;"></td>
+          <td style="width:10%; vertical-align:bottom;">
+            <div style="font-size:10pt">&nbsp;</div>
+            <div class="sig-line">Date</div>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <!-- Cybersecurity Engineer -->
     <div class="signatory-row">
       <div class="signatory-title">Cybersecurity Engineer:</div>
-      <div class="sig-line-row">
-        <div style="flex:1">
-          <div style="font-size:10pt">{{ engineer_name }}</div>
-          <div class="sig-line">Name</div>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:10pt">&nbsp;</div>
-          <div class="sig-line">Sign</div>
-        </div>
-        <div style="flex:0.5">
-          <div style="font-size:10pt">&nbsp;</div>
-          <div class="sig-line">Date</div>
-        </div>
-      </div>
+      <table style="width:100%; border-collapse: collapse; margin-top: 4px;">
+        <tr>
+          <td style="width:40%; vertical-align:bottom;">
+            <div style="font-size:10pt">{{ engineer_name }}</div>
+            <div class="sig-line">Name</div>
+          </td>
+          <td style="width:10%;"></td>
+          <td style="width:35%; vertical-align:bottom;">
+            <div style="font-size:10pt">&nbsp;</div>
+            <div class="sig-line">Sign</div>
+          </td>
+          <td style="width:5%;"></td>
+          <td style="width:10%; vertical-align:bottom;">
+            <div style="font-size:10pt">&nbsp;</div>
+            <div class="sig-line">Date</div>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <!-- Technical Services Manager -->
     <div class="signatory-row" style="border-bottom:none">
-      <div class="signatory-title">
-        Technical Services Manager:</div>
-      <div class="sig-line-row">
-        <div style="flex:1">
-          <div style="font-size:10pt">{{ manager_name }}</div>
-          <div class="sig-line">Name</div>
-        </div>
-        <div style="flex:1">
-          <div style="font-size:10pt">&nbsp;</div>
-          <div class="sig-line">Sign</div>
-        </div>
-        <div style="flex:0.5">
-          <div style="font-size:10pt">&nbsp;</div>
-          <div class="sig-line">Date</div>
-        </div>
-      </div>
+      <div class="signatory-title">Technical Services Manager:</div>
+      <table style="width:100%; border-collapse: collapse; margin-top: 4px;">
+        <tr>
+          <td style="width:40%; vertical-align:bottom;">
+            <div style="font-size:10pt">{{ manager_name }}</div>
+            <div class="sig-line">Name</div>
+          </td>
+          <td style="width:10%;"></td>
+          <td style="width:35%; vertical-align:bottom;">
+            <div style="font-size:10pt">&nbsp;</div>
+            <div class="sig-line">Sign</div>
+          </td>
+          <td style="width:5%;"></td>
+          <td style="width:10%; vertical-align:bottom;">
+            <div style="font-size:10pt">&nbsp;</div>
+            <div class="sig-line">Date</div>
+          </td>
+        </tr>
+      </table>
     </div>
   </div>
+
 
 </div>
 
