@@ -532,7 +532,7 @@ def log_incident():
         return render_template('log_incident.html', analysts=analysts, active_page='incidents')
     except Exception as e:
         import traceback; traceback.print_exc()
-        flash('Error logging incident.','error')
+        flash(f'Error logging incident: {str(e)}','error')
         return redirect(url_for('incidents'))
 
 @app.route('/incidents/pdf-data/<incident_id>')
@@ -752,7 +752,7 @@ def edit_incident(incident_id):
             if str(incident['assigned_to'] or '') != str(assigned_to or ''):
                 u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone() if assigned_to else None
                 changes.append(f"reassigned to {u['full_name'] if u else 'Unassigned'}")
-            if incident['severity'] != severity: changes.append(f'priority to {severity}')
+            if incident['priority'] != severity: changes.append(f'priority to {severity}')
             if incident['status'] != 'Open' and not changes: changes.append('general details')
             
             diff_text = f"Updated incident {incident['incident_id']}: modified " + ", ".join(changes) if changes else f"Updated incident {incident_id}"
@@ -769,7 +769,7 @@ def edit_incident(incident_id):
             active_page='incidents')
     except Exception as e:
         import traceback; traceback.print_exc()
-        flash('Error editing incident.','error')
+        flash(f'Error editing incident: {str(e)}','error')
         return redirect(url_for('incidents'))
 
 @app.route('/incidents/assign/<incident_id>', methods=['POST'])
