@@ -27,7 +27,7 @@
           <span class="icon">🚨</span> CIRT Incidents
         </a>
         <a href="/alerts" class="{{ 'active' if active_page == 'alerts' else '' }}">
-          <span class="icon">🔔</span> Alerts
+          <i class="sidebar-icon icon-alerts"></i> Alerts
           {% if unread_alerts_count > 0 %}
           <span class="alert-badge" id="sidebarAlertBadge">{{ unread_alerts_count }}</span>
           {% else %}
@@ -38,20 +38,20 @@
       {% else %}
       <div class="nav-section-label">Main</div>
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">
-        <span class="icon">🏠</span> Dashboard
+        <i class="sidebar-icon icon-dashboard"></i> Dashboard
       </a>
       <a href="/incidents" class="{{ 'active' if active_page == 'incidents' else '' }}">
-        <span class="icon">📋</span> Incidents
+        <i class="sidebar-icon icon-incidents"></i> Incidents
       </a>
       <a href="/correlation" class="{{ 'active' if active_page == 'correlation' else '' }}">
-        <span class="icon">🔗</span> Correlation
+        <i class="sidebar-icon icon-correlation"></i> Correlation
       </a>
       <a href="/similarity" class="{{ 'active' if active_page == 'similarity' else '' }}">
-        <span class="icon">🔍</span> Similarity
+        <i class="sidebar-icon icon-similarity"></i> Similarity
       </a>
       <div class="nav-section-label">Management</div>
       <a href="/alerts" class="{{ 'active' if active_page == 'alerts' else '' }}">
-        <span class="icon">🔔</span> Alerts
+        <i class="sidebar-icon icon-alerts"></i> Alerts
         {% if unread_alerts_count > 0 %}
         <span class="alert-badge" id="sidebarAlertBadge">{{ unread_alerts_count }}</span>
         {% else %}
@@ -61,16 +61,16 @@
 
       {% if current_user.has_admin_privileges or current_user.role == 'Admin' %}
       <a href="/reports" class="{{ 'active' if active_page == 'reports' else '' }}">
-        <span class="icon">📊</span> Reports
+        <i class="sidebar-icon icon-reports"></i> Reports
       </a>
       {% endif %}
 
       {% if current_user.role == 'Admin' %}
       <a href="/settings" class="{{ 'active' if active_page == 'settings' else '' }}">
-        <span class="icon">⚙️</span> Settings
+        <i class="sidebar-icon icon-settings"></i> Settings
       </a>
       <a href="/users" class="{{ 'active' if active_page == 'users' else '' }}">
-        <span class="icon">👥</span> Users
+        <i class="sidebar-icon icon-users"></i> Users
       </a>
       {% endif %}
       {% endif %}
