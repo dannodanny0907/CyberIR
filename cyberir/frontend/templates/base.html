@@ -10,12 +10,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   {% block extra_css %}{% endblock %}
+  <script>
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
 </head>
 
 <body>
   <div class="sidebar">
-    <div class="logo-area">
+    <div class="logo-area" style="position: relative;">
       🛡️ <span class="logo-text">CyberIR</span>
+      <button id="sidebarToggleBtn" class="sidebar-toggle-chevron">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
       <div class="subtitle">Incident Management</div>
     </div>
 

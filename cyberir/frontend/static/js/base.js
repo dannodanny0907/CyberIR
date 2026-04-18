@@ -119,16 +119,22 @@ setTimeout(() => {
     })
 }, 4000)
 
-// Mobile Support (Hamburger Menu & Sidebar Overlay)
+// Universal Sidebar Toggle (Desktop Collapse & Mobile Overlay)
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar')
-    const mobileBtn = document.getElementById('mobileMenuBtn')
+    const desktopToggle = document.getElementById('sidebarToggleBtn')
+    const mobileToggle = document.getElementById('mobileMenuBtn')
     
     let overlay = document.createElement('div')
     overlay.className = 'sidebar-overlay'
     document.body.appendChild(overlay)
 
-    mobileBtn?.addEventListener('click', () => {
+    desktopToggle?.addEventListener('click', () => {
+        const isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+    })
+
+    mobileToggle?.addEventListener('click', () => {
         sidebar?.classList.toggle('open')
         overlay.classList.toggle('visible')
     })

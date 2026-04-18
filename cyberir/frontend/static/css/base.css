@@ -540,3 +540,142 @@ body { display: flex; margin: 0; font-family: 'Inter', system-ui, sans-serif; ba
 .icon-reports { -webkit-mask-image: url('../icons/report.png'); mask-image: url('../icons/report.png'); }
 .icon-settings { -webkit-mask-image: url('../icons/settings.png'); mask-image: url('../icons/settings.png'); }
 .icon-users { -webkit-mask-image: url('../icons/users.png'); mask-image: url('../icons/users.png'); }
+
+/* Sidebar Collapse Mode Additions */
+.sidebar { transition: width 0.3s ease, transform 0.3s ease; overflow-x: hidden; }
+.main-wrapper { transition: margin-left 0.3s ease, width 0.3s ease; }
+
+.sidebar-collapsed .sidebar { width: 70px; }
+.sidebar-collapsed .main-wrapper { margin-left: 70px; width: calc(100% - 70px); }
+
+/* Hide text elements smoothly */
+.sidebar-collapsed .logo-area { text-align: center; }
+.sidebar-collapsed .logo-text,
+.sidebar-collapsed .subtitle,
+.sidebar-collapsed .nav-section-label,
+.sidebar-collapsed .sidebar-user-info,
+.sidebar-collapsed .profile-chevron {
+    display: none !important;
+}
+.sidebar-collapsed .nav-links a {
+    justify-content: center;
+    padding: 10px;
+    margin: 2px 10px;
+    position: relative;
+}
+/* specifically hide text children in a tags */
+.sidebar-collapsed .nav-links a span:not(.icon):not(.sidebar-icon):not(.alert-badge) {
+    display: none;
+}
+/* For links where text is NOT wrapped in a span yet, like Dashboard text */
+/* In base.html Dashboard text is not in a span. */
+.sidebar-collapsed .nav-links a {
+    font-size: 0; /* hides raw text */
+}
+.sidebar-collapsed .nav-links a .icon,
+.sidebar-collapsed .nav-links a .sidebar-icon,
+.sidebar-collapsed .nav-links a .alert-badge {
+    font-size: 0.95rem; /* restores icon size */
+}
+.sidebar-collapsed .sidebar-icon {
+    width: 1.3rem; height: 1.3rem;
+    margin: 0 !important;
+}
+
+.sidebar-collapsed .alert-badge {
+    position: absolute;
+    right: 2px;
+    top: 2px;
+    margin: 0;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+}
+
+/* Adjust User block constraints */
+.sidebar-collapsed .sidebar-user-wrapper {
+    padding: 12px 10px;
+    display: flex;
+    justify-content: center;
+}
+.sidebar-collapsed .sidebar-user-trigger {
+    padding: 8px;
+    justify-content: center;
+    gap: 0;
+}
+.sidebar-collapsed .avatar-circle {
+    margin: 0;
+}
+
+/* Sidebar Chevron */
+.sidebar-toggle-chevron {
+    position: absolute;
+    right: 12px;
+    top: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--sidebar-text);
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.sidebar-toggle-chevron:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+.sidebar-toggle-chevron svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.3s ease;
+}
+.sidebar-collapsed .sidebar-toggle-chevron {
+    right: 50%;
+    transform: translateX(50%);
+}
+.sidebar-collapsed .sidebar-toggle-chevron svg {
+    transform: rotate(180deg);
+}
+@media (max-width: 900px) {
+  .sidebar-toggle-chevron { display: none !important; }
+}
+
+/* Sidebar Chevron */
+.sidebar-toggle-chevron {
+    position: absolute;
+    right: 18px;
+    top: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--sidebar-text);
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.sidebar-toggle-chevron:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+.sidebar-toggle-chevron svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.3s ease;
+}
+.sidebar-collapsed .sidebar-toggle-chevron {
+    right: 50%;
+    transform: translateX(50%);
+}
+.sidebar-collapsed .sidebar-toggle-chevron svg {
+    transform: rotate(180deg);
+}
+@media (max-width: 900px) {
+  .sidebar-toggle-chevron { display: none !important; }
+}
