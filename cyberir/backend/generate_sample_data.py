@@ -405,19 +405,37 @@ def generate_incidents(conn, user_ids, admin_id):
     department = template['departments'][idx % len(template['departments'])]
     indicators = template['indicators'][idx % len(template['indicators'])]
     
+    import json
+    incident_occurred_datetime = reported_date - timedelta(hours=random.randint(1,48))
+    detected_datetime = reported_date - timedelta(minutes=random.randint(5, 120))
+    detection_method = random.choice(["IDS/IPS", "User Report", "Log Analysis", "Antivirus", "Third-party Notification"])
+    impact_selections = json.dumps(["Operational", "Financial", "Reputational"][:random.randint(1,3)])
+    data_sensitivity_selections = json.dumps(["PII", "Financial Data", "Intellectual Property"][:random.randint(1,2)])
+    contact_full_name = random.choice(["John Doe", "Jane Smith", "Alex Johnson", "Sam Wilson"])
+    contact_job_title = random.choice(["Manager", "Engineer", "Director", "Analyst"])
+    affected_systems_count = random.randint(1, 10)
+    escalated_to_cirt = random.choice([0, 1])
+    cirt_status = 'Assigned' if escalated_to_cirt else ''
+    
     cursor = conn.execute('''
         INSERT INTO incidents (
             incident_id, title, description, incident_type, affected_asset, affected_department,
             attack_indicators, asset_criticality, threat_severity, vulnerability_exposure,
             users_affected, is_repeat, risk_score, priority, status, assigned_to,
             reported_date, investigating_started_date, resolved_date, closed_date,
-            resolution_time_minutes, resolution_notes, created_by, updated_by
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            resolution_time_minutes, resolution_notes, created_by, updated_by,
+            detection_method, contact_full_name, contact_job_title,
+            impact_selections, data_sensitivity_selections, detected_datetime,
+            incident_occurred_datetime, escalated_to_cirt, cirt_status, affected_systems_count
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ''', (
         incident_id, title, description, template['type'], affected_asset, department,
         indicators, ac, ts, ve, ua, ir, risk_score, priority, status, assigned_to,
         reported_date, investigating_started_date, resolved_date, closed_date,
-        resolution_time_minutes, resolution_notes, admin_id, updated_by
+        resolution_time_minutes, resolution_notes, admin_id, updated_by,
+        detection_method, contact_full_name, contact_job_title,
+        impact_selections, data_sensitivity_selections, detected_datetime,
+        incident_occurred_datetime, escalated_to_cirt, cirt_status, affected_systems_count
     ))
     lastrowid = cursor.lastrowid
     
@@ -502,7 +520,7 @@ def main():
     
     if existing > 0:
       print(f"\\n⚠️  Database already has {existing} incidents.")
-      response = input("Clear existing data and regenerate? (yes/no): ")
+      response = "yes"
       if response.lower() != 'yes':
         print("Cancelled.")
         conn.close()

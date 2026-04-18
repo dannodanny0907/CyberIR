@@ -110,6 +110,7 @@ def run_similarity(new_incident_id):
     try:
         new_inc_row = conn.execute('SELECT * FROM incidents WHERE id = ?', (new_incident_id,)).fetchone()
         if not new_inc_row:
+            conn.close()
             return {"found": False, "matches": []}
             
         new_incident = dict(new_inc_row)
@@ -191,6 +192,7 @@ def run_similarity(new_incident_id):
                 ''', (msg, new_incident_id, recip_id, recip_role))
                 
         conn.commit()
+        conn.close()
         return {
             "found": len(top_matches) > 0,
             "matches": top_matches,
@@ -199,6 +201,7 @@ def run_similarity(new_incident_id):
         }
     except Exception as e:
         print(f"Similarity error: {e}")
+        conn.close()
         return {"found": False, "matches": [], "suggestion": None, "error": str(e)}
 
 # Handle logic for get_cached_similarity
