@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     vulnerability_exposure INTEGER CHECK(vulnerability_exposure BETWEEN 1 AND 5),
     is_repeat BOOLEAN DEFAULT 0,
     risk_score REAL,
-    priority TEXT CHECK(priority IN ('Critical','High','Medium','Low')),
+    priority TEXT CHECK(priority IN ('Catastrophic','Major','Moderate','Minor')),
     status TEXT DEFAULT 'Open' CHECK(status IN ('Open','Investigating','Resolved','Closed')),
     assigned_to INTEGER REFERENCES users(id),
     cluster_id TEXT,
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS incident_clusters (
     first_detected TIMESTAMP NOT NULL,
     last_updated TIMESTAMP,
     status TEXT DEFAULT 'Active' CHECK(status IN ('Active','Investigating','Resolved')),
-    severity TEXT CHECK(severity IN ('Critical','High','Medium','Low')),
+    severity TEXT CHECK(severity IN ('Catastrophic','Major','Moderate','Minor')),
     assigned_to INTEGER REFERENCES users(id),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

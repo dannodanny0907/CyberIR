@@ -47,10 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const priorityData = JSON.parse(priorityDataRaw);
     
     const priorityColors = {
-        'Catastrophic': '#dc2626',
-        'Major': '#ea580c',
-        'Moderate': '#2563eb',
-        'Minor': '#16a34a'
+        'Catastrophic': '#ef4444',
+        'Major': '#f97316',
+        'Moderate': '#3b82f6',
+        'Minor': '#22c55e'
     };
     
     const priorityChart = new Chart(document.getElementById('priorityChart'), {

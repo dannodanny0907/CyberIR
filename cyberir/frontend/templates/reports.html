@@ -202,7 +202,7 @@
             <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">By Priority</div>
             
             <!-- Critical -->
-            <a href="/reports?priority=Critical" class="stat-filter-link">
+            <a href="/reports?priority=Catastrophic" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.priority == 'Catastrophic' %}active-filter-row{% endif %}">
                 <div class="stat-row-label"><span class="badge priority-critical">Catastrophic</span></div>
                 <div class="stat-row-count">{{ metrics.catastrophic_count }}</div>
@@ -214,7 +214,7 @@
             </a>
 
             <!-- High -->
-            <a href="/reports?priority=High" class="stat-filter-link">
+            <a href="/reports?priority=Major" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.priority == 'Major' %}active-filter-row{% endif %}">
                 <div class="stat-row-label"><span class="badge priority-high">Major</span></div>
                 <div class="stat-row-count">{{ metrics.major_count }}</div>
@@ -226,7 +226,7 @@
             </a>
 
             <!-- Medium -->
-            <a href="/reports?priority=Medium" class="stat-filter-link">
+            <a href="/reports?priority=Moderate" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.priority == 'Moderate' %}active-filter-row{% endif %}">
                 <div class="stat-row-label"><span class="badge priority-medium">Moderate</span></div>
                 <div class="stat-row-count">{{ metrics.moderate_count }}</div>
@@ -238,7 +238,7 @@
             </a>
 
             <!-- Low -->
-            <a href="/reports?priority=Low" class="stat-filter-link">
+            <a href="/reports?priority=Minor" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.priority == 'Minor' %}active-filter-row{% endif %}">
                 <div class="stat-row-label"><span class="badge priority-low">Minor</span></div>
                 <div class="stat-row-count">{{ metrics.minor_count }}</div>

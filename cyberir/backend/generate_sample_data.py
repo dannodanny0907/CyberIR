@@ -371,10 +371,10 @@ def generate_incidents(conn, user_ids, admin_id):
     raw = (ac*0.30 + ts*0.30 + ve*0.15 + ua_score*0.20 + (5 if ir else 1)*0.05)
     risk_score = round((raw/5)*100, 2)
     
-    if risk_score >= 75: priority = "Critical"
-    elif risk_score >= 50: priority = "High"
-    elif risk_score >= 25: priority = "Medium"
-    else: priority = "Low"
+    if risk_score >= 75: priority = "Catastrophic"
+    elif risk_score >= 50: priority = "Major"
+    elif risk_score >= 25: priority = "Moderate"
+    else: priority = "Minor"
     
     assigned_to = analyst_ids[scenario['at']] if scenario['at'] is not None else None
     
