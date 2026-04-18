@@ -520,7 +520,7 @@ def main():
     
     if existing > 0:
       print(f"\\n⚠️  Database already has {existing} incidents.")
-      response = "yes"
+      response = input("Clear existing data and regenerate? (yes/no): ")
       if response.lower() != 'yes':
         print("Cancelled.")
         conn.close()
