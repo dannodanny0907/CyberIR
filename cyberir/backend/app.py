@@ -322,6 +322,8 @@ def export_cirt_incidents():
         
     conn = get_db_connection()
     incidents = conn.execute("SELECT * FROM incidents WHERE escalated_to_cirt = 1 ORDER BY reported_date DESC").fetchall()
+    conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Incidents','Exported CIRT incidents to CSV')",[current_user.id])
+    conn.commit()
     conn.close()
     
     si = StringIO()
@@ -569,6 +571,9 @@ def generate_pdf(incident_id):
     incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?", [incident_id]).fetchone()
     user_row = conn.execute("SELECT full_name FROM users WHERE id=?", [incident['assigned_to']]).fetchone() if incident and incident['assigned_to'] else None
     assigned_name = user_row['full_name'] if user_row else ''
+    if incident:
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'UPDATE_INCIDENT','Incident',?,?)",[current_user.id, incident['id'], f"Exported incident {incident_id} as PDF"])
+        conn.commit()
     conn.close()
     
     if not incident:
@@ -1285,6 +1290,8 @@ def export_incidents():
     query += " ORDER BY i.reported_date DESC"
 
     rows = conn.execute(query, params).fetchall()
+    conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Incidents','Exported incidents report to CSV')",[current_user.id])
+    conn.commit()
     conn.close()
 
     si = StringIO()
@@ -1314,6 +1321,8 @@ def export_clusters():
     from flask import Response
     conn = get_db_connection()
     rows = conn.execute("SELECT cluster_id,cluster_name,incident_count,primary_type,severity,status,first_detected,last_updated FROM incident_clusters").fetchall()
+    conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Clusters','Exported clusters report to CSV')",[current_user.id])
+    conn.commit()
     conn.close()
     si = StringIO()
     w = csv.writer(si)
@@ -1330,6 +1339,8 @@ def export_activity():
     from flask import Response
     conn = get_db_connection()
     rows = conn.execute("SELECT u.full_name,al.action_type,al.target_type,al.target_id,al.details,al.ip_address,al.created_at FROM activity_logs al JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC").fetchall()
+    conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Activity_Logs','Exported activity logs to CSV')",[current_user.id])
+    conn.commit()
     conn.close()
     si = StringIO()
     w = csv.writer(si)
