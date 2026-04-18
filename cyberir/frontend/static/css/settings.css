@@ -315,3 +315,9 @@
     width: 150px;
     text-transform: uppercase;
 }
+
+
+@media (max-width: 1200px) {
+    .settings-grid { grid-template-columns: 1fr !important; }
+    .config-grid { grid-template-columns: 1fr !important; }
+}

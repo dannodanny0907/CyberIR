@@ -3,7 +3,7 @@
 
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
     margin-bottom: 24px;
 }
@@ -166,3 +166,8 @@
 }
 .toast-success { background: #166534; }
 .toast-error { background: #dc2626; }
+
+
+@media (max-width: 1200px) {
+    .comparison-grid { grid-template-columns: 1fr; }
+}

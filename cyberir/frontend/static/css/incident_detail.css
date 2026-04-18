@@ -107,3 +107,8 @@
     font-weight: 500;
 }
 .btn-pdf-export:hover { background: #1e3a8a; }
+
+
+@media (max-width: 1200px) {
+    .detail-grid { grid-template-columns: 1fr; }
+}

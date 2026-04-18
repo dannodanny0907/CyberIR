@@ -293,3 +293,8 @@ input:disabled + .toggle-slider {
     color: var(--text-secondary);
     white-space: nowrap;
 }
+
+
+@media (max-width: 1200px) {
+    .profile-grid { grid-template-columns: 1fr !important; }
+}

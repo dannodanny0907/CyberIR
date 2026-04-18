@@ -1,6 +1,6 @@
 /* File: correlation.css - Styles for the correlation and clustering interfaces */
 /* Stats bar overrides */
-.stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .stat-card { background: white; border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 .stat-icon { font-size: 1.8rem; }
 .stat-count { font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--text-primary); }
@@ -85,4 +85,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+
+@media (max-width: 1200px) {
+    .clusters-grid { grid-template-columns: 1fr; }
+    .correlation-layout { grid-template-columns: 1fr !important; }
 }

@@ -193,3 +193,9 @@
     border-left: 3px solid #2563eb;
     padding-left: 8px !important;
 }
+
+
+@media (max-width: 1200px) {
+    .control-panel { grid-template-columns: 1fr; }
+    .reports-grid { grid-template-columns: 1fr; }
+}
