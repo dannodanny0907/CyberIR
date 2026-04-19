@@ -67,12 +67,12 @@
         <option value="Closed" {% if request.args.get('status') == 'Closed' %}selected{% endif %}>Closed</option>
     </select>
 
-    <select name="priority" class="filter-select">
-        <option value="All Priorities" {% if request.args.get('priority') == 'All Priorities' or not request.args.get('priority') %}selected{% endif %}>All Severities</option>
-        <option value="Catastrophic" {% if request.args.get('priority') == 'Catastrophic' %}selected{% endif %}>Catastrophic</option>
-        <option value="Major" {% if request.args.get('priority') == 'Major' %}selected{% endif %}>Major</option>
-        <option value="Moderate" {% if request.args.get('priority') == 'Moderate' %}selected{% endif %}>Moderate</option>
-        <option value="Minor" {% if request.args.get('priority') == 'Minor' %}selected{% endif %}>Minor</option>
+    <select name="severity" class="filter-select">
+        <option value="" {% if not request.args.get('severity') %}selected{% endif %}>All Severities</option>
+        <option value="Catastrophic" {% if request.args.get('severity') == 'Catastrophic' %}selected{% endif %}>Catastrophic</option>
+        <option value="Major" {% if request.args.get('severity') == 'Major' %}selected{% endif %}>Major</option>
+        <option value="Moderate" {% if request.args.get('severity') == 'Moderate' %}selected{% endif %}>Moderate</option>
+        <option value="Minor" {% if request.args.get('severity') == 'Minor' %}selected{% endif %}>Minor</option>
     </select>
 
     <select name="incident_type" class="filter-select">

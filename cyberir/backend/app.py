@@ -376,7 +376,7 @@ def incidents():
         if status_filter and status_filter not in ('', 'All Statuses'):
             where_clauses.append("i.status=?")
             params.append(status_filter)
-        if severity_filter and severity_filter not in ('', 'All Priorities'):
+        if severity_filter and severity_filter not in ('', 'All Priorities', 'All Severities'):
             where_clauses.append("i.priority=?")
             params.append(severity_filter)
         if type_filter and type_filter not in ('', 'All Types'):
@@ -385,6 +385,13 @@ def incidents():
         if search:
             where_clauses.append("(i.title LIKE ? OR i.incident_id LIKE ? OR i.affected_asset LIKE ?)")
             params.extend([f'%{search}%']*3)
+        assigned_to_filter = request.args.get('assigned_to', '')
+        if assigned_to_filter and assigned_to_filter not in ('', 'Anyone'):
+            if assigned_to_filter == 'Unassigned':
+                where_clauses.append("i.assigned_to IS NULL")
+            else:
+                where_clauses.append("i.assigned_to=?")
+                params.append(assigned_to_filter)
 
         where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
