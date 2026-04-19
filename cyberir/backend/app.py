@@ -1187,7 +1187,7 @@ def reports():
 
         active_filters = {
             'status':   status_filter,
-            'priority': severity_filter,
+            'severity': severity_filter,
             'type':     type_filter,
         }
 
