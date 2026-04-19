@@ -1,62 +1,46 @@
 {% extends 'base.html' %}
 
-{% block title %}Log Files | {{ app_name }}{% end block %}
+{% block title %}User Activity | CyberIR{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}">
-{% end block %}
+{% block page_title %}Reports & Analytics{% endblock %}
 
 {% block content %}
-<div class="activity-container">
-    <div class="activity-header">
-        <div class="activity-title">
-            <h1>Log files</h1>
-        </div>
-        <div class="activity-actions">
-            <button class="btn-icon" title="View Options"><i class="fas fa-th-large"></i></button>
-            <button class="btn-icon" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-            <button class="btn-icon" title="Help"><i class="fas fa-question-circle"></i></button>
-        </div>
+<div class="card" style="padding: 0; margin-bottom: 24px;">
+    <div style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0;">👥 All User Activity ({{ logs|length }} Events)</h2>
+        <a href="/reports" class="export-button" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none; color: inherit;">&larr; Back to Reports</a>
     </div>
 
-    <div class="filter-bar">
-        <div class="filter-dropdown">
-            <span class="filter-text">Events ({{ logs|length }})</span>
-            <i class="fas fa-chevron-down"></i>
-        </div>
-    </div>
-
-    <div class="table-container">
-        <table class="log-table" id="logTable">
+    {% if logs %}
+    <div style="overflow-x: auto; padding: 0 20px 20px 20px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #374151;">
             <thead>
-                <tr>
-                    <th width="20%">Time</th>
-                    <th width="15%">Component</th>
-                    <th width="50%">Event</th>
-                    <th width="15%">User</th>
+                <tr style="border-bottom: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; text-align: left;">
+                    <th style="padding: 8px 12px; font-weight: normal; width: 15%;">Time</th>
+                    <th style="padding: 8px 12px; font-weight: normal; width: 15%;">Component</th>
+                    <th style="padding: 8px 12px; font-weight: normal; width: 50%;">Event</th>
+                    <th style="padding: 8px 12px; font-weight: normal; width: 20%;">User</th>
                 </tr>
             </thead>
             <tbody>
-                {% if logs %}
-                    {% for log in logs %}
-                    <tr>
-                        <td class="log-time">{{ log.created_at|replace('-', '/')|replace('T', ' ') }}</td>
-                        <td class="log-component"><span class="component-pipe">|</span> {{ log.target_type }}</td>
-                        <td class="log-event">{{ log.action }}</td>
-                        <td class="log-user">{{ log.user_name }}</td>
-                    </tr>
-                    {% end for %}
-                {% else %}
-                    <tr>
-                        <td colspan="4" class="no-logs">No log files recorded yet.</td>
-                    </tr>
-                {% endif %}
+                {% for a in logs %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 8px 12px; white-space: nowrap; color: #6b7280;">
+                        {{ a.created_at[8:10] }}/{{ a.created_at[5:7] }}/{{ a.created_at[0:4] }} {{ a.created_at[11:] }}
+                    </td>
+                    <td style="padding: 8px 12px; white-space: nowrap;"><span style="color: #1f2937; font-weight: bold; margin-right: 6px;">|</span> {{ a.target_type or 'System' }}</td>
+                    <td style="padding: 8px 12px; color: #374151;">{{ a.details or a.action_type }}</td>
+                    <td style="padding: 8px 12px; white-space: nowrap; color: #4b5563;">{{ a.full_name }} <span style="font-size:0.75rem; color:#94a3b8; margin-left:4px;">{{ a.role|upper }}</span></td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+        <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
+        <div>No user activity recorded yet.</div>
+    </div>
+    {% endif %}
 </div>
-{% end block %}
-
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/activity.js') }}"></script>
-{% end block %}
+{% endblock %}

@@ -1330,6 +1330,27 @@ def export_clusters():
     for r in rows: w.writerow(list(r))
     return Response(si.getvalue(), mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=clusters_export.csv'})
 
+@app.route('/reports/activity_logs')
+@login_required
+def activity_logs():
+    if current_user.role == 'CIRT':
+        flash('Access restricted to CIRT portal.', 'error')
+        return redirect(url_for('cirt_incidents'))
+    if current_user.role != 'Admin' and not current_user.has_admin_privileges:
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+    try:
+        conn = get_db_connection()
+        logs = conn.execute(
+            "SELECT al.*, u.full_name, u.role FROM activity_logs al JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC"
+        ).fetchall()
+        conn.close()
+        return render_template('activity.html', logs=logs, active_page='reports')
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash('Error loading activity logs.', 'error')
+        return redirect(url_for('dashboard'))
+
 @app.route('/reports/export/activity')
 @login_required
 # Generate downloadable CSV report of user activity logs

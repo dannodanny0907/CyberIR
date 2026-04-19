@@ -317,8 +317,9 @@
 
 <!-- SECTION 3 User Activity Summary -->
 <div class="card" style="padding: 0; margin-bottom: 24px;">
-    <div style="padding: 16px 20px;">
+    <div style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
         <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0;">👥 User Activity</h2>
+        <a href="/reports/activity_logs" style="font-size: 0.85rem; color: #2563eb; text-decoration: none; font-weight: 500;">View All &rarr;</a>
     </div>
     
     {% if recent_activity|length > 0 %}
