@@ -154,12 +154,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 })
+                if (!r.ok) {
+                    this.textContent = '❌ Error';
+                    alert('Server error: ' + r.status + ' ' + r.statusText);
+                    return;
+                }
                 const result = await r.json()
                 
                 this.textContent = result.success ? '✅ Saved!' : '❌ Error'
-                if (!result.success) alert(result.message)
+                if (!result.success) alert(result.message || 'An unknown error occurred')
             } catch(e) {
                 this.textContent = '❌ Request Failed';
+                alert('Request failed: ' + e.message);
             }
             
             this.disabled = false

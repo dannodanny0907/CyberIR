@@ -1420,12 +1420,16 @@ def settings():
             'total_users': conn.execute("SELECT COUNT(*) as c FROM users WHERE is_active=1").fetchone()['c'],
             'total_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters").fetchone()['c'],
             'total_alerts': conn.execute("SELECT COUNT(*) as c FROM alerts").fetchone()['c'],
-            'total_logs': conn.execute("SELECT COUNT(*) as c FROM activity_logs").fetchone()['c'],
+            'total_activity_logs': conn.execute("SELECT COUNT(*) as c FROM activity_logs").fetchone()['c'],
         }
+        recent_incidents = conn.execute(
+            "SELECT incident_id, title FROM incidents ORDER BY reported_date DESC LIMIT 20"
+        ).fetchall()
         conn.close()
         return render_template('settings.html',
             settings=settings_dict,
             system_info=system_info,
+            recent_incidents=recent_incidents,
             active_page='settings')
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -1479,13 +1483,36 @@ def save_system_settings():
     try:
         data = request.get_json(silent=True) or request.form
         conn = get_db_connection()
-        for key in ['organization_name','incident_id_prefix']:
+        for key in ['organization_name','incident_id_prefix','session_timeout','date_format']:
             val = data.get(key)
             if val is not None:
                 conn.execute("INSERT INTO settings (setting_key,setting_value,setting_type) VALUES (?,?,'string') ON CONFLICT(setting_key) DO UPDATE SET setting_value=?,updated_by=?,updated_at=datetime('now')",[key,val,val,current_user.id])
         conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Updated core system preferences')",[current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True})
+    except Exception as e:
+        return jsonify({'success':False,'message':str(e)})
+
+@app.route('/settings/risk-weights', methods=['POST'])
+@login_required
+# Update risk scoring weight factors used in score calculation
+def save_risk_weights():
+    if current_user.role != 'Admin':
+        return jsonify({'success':False,'message':'Admin only'})
+    try:
+        data = request.get_json(silent=True) or request.form
+        conn = get_db_connection()
+        for key in ['weight_asset_criticality','weight_threat_severity','weight_vulnerability_exposure','weight_users_affected','weight_repeat_penalty']:
+            val = data.get(key)
+            if val is not None:
+                row = conn.execute("SELECT setting_key FROM settings WHERE setting_key=?", [key]).fetchone()
+                if row:
+                    conn.execute("UPDATE settings SET setting_value=?,updated_by=?,updated_at=datetime('now') WHERE setting_key=?",[str(val),current_user.id,key])
+                else:
+                    conn.execute("INSERT INTO settings (setting_key,setting_value,setting_type,updated_by) VALUES (?,?,'float',?)",[key,str(val),current_user.id])
+        conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Updated risk scoring weights')",[current_user.id])
+        conn.commit(); conn.close()
+        return jsonify({'success':True,'message':'Risk weights saved'})
     except Exception as e:
         return jsonify({'success':False,'message':str(e)})
 
@@ -1497,7 +1524,7 @@ def reset_settings():
         return jsonify({'success':False})
     try:
         conn = get_db_connection()
-        defaults = [('correlation_threshold','0.65'),('correlation_time_window_hours','48'),('similarity_threshold','0.50'),('similarity_result_limit','5'),('critical_sla_hours','4'),('high_sla_hours','24'),('medium_sla_hours','72'),('low_sla_hours','168'),('organization_name','CyberIR'),('incident_id_prefix','INC-')]
+        defaults = [('correlation_threshold','0.65'),('correlation_time_window_hours','48'),('similarity_threshold','0.50'),('similarity_result_limit','5'),('critical_sla_hours','4'),('high_sla_hours','24'),('medium_sla_hours','72'),('low_sla_hours','168'),('organization_name','CyberIR'),('incident_id_prefix','INC-'),('weight_asset_criticality','0.3'),('weight_threat_severity','0.3'),('weight_vulnerability_exposure','0.15'),('weight_users_affected','0.2'),('weight_repeat_penalty','0.05'),('session_timeout','60'),('date_format','DD/MM/YYYY')]
         for key,val in defaults:
             conn.execute("UPDATE settings SET setting_value=? WHERE setting_key=?",[val,key])
         conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_SETTINGS','Settings','Reset system configurations to factory defaults')",[current_user.id])
