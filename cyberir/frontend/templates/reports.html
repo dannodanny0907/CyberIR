@@ -12,7 +12,7 @@
 <!-- FILTER BANNER: shown when arriving from a dashboard chart click -->
 {% if active_filters and (active_filters.status or active_filters.severity or active_filters.type) %}
 <div class="active-filters-banner">
-    <span class="filter-icon">🔍</span>
+    <span class="filter-icon"></span>
     <span class="filter-text">Filtering by:</span>
     {% if active_filters.status %}
     <span class="filter-badge filter-badge-status">Status: {{ active_filters.status }}</span>
@@ -30,14 +30,14 @@
 <!-- SECTION 1 Algorithm Performance Report -->
 <div class="card" style="margin-bottom: 24px;">
     <div style="margin-bottom: 20px;">
-        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">🤖 Algorithm Performance Summary</h2>
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">Algorithm Performance Summary</h2>
         <div style="font-size: 0.85rem; color: var(--text-secondary);">Real-time metrics for both core algorithms</div>
     </div>
 
     <div class="algorithm-grid">
         <!-- LEFT: Correlation Algorithm -->
         <div class="algorithm-col">
-            <div class="algo-header">🔗 Correlation Engine</div>
+            <div class="algo-header">Correlation Engine</div>
             
             <div class="metric-row">
                 <span class="metric-label">Total Clusters Created:</span>
@@ -81,7 +81,7 @@
 
         <!-- RIGHT: Similarity Algorithm -->
         <div class="algorithm-col">
-            <div class="algo-header">🔍 Similarity Engine</div>
+            <div class="algo-header">Similarity Engine</div>
             
             <div class="metric-row">
                 <span class="metric-label">Total Matches Found:</span>
@@ -124,7 +124,7 @@
 <!-- SECTION 2 Incident Statistics -->
 <div class="card" style="margin-bottom: 24px;">
     <div style="margin-bottom: 20px;">
-        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">📋 Incident Statistics</h2>
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">Incident Statistics</h2>
     </div>
 
     <div class="stats-grid">
@@ -268,7 +268,7 @@
 <div class="card" style="margin-bottom: 24px; padding: 0; overflow: hidden;">
     <div style="padding: 16px 20px 12px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <div>
-            <h2 style="font-size: 1rem; color: var(--text-primary); margin: 0 0 3px 0;">📋 Filtered Incidents</h2>
+            <h2 style="font-size: 1rem; color: var(--text-primary); margin: 0 0 3px 0;">Filtered Incidents</h2>
             <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ filtered_incidents|length }} incident(s) match active filters</div>
         </div>
         <a href="/reports" class="clear-filters-btn" style="font-size: 0.8rem;">✕ Clear filters</a>
@@ -307,7 +307,7 @@
     </div>
     {% else %}
     <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-        <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
+        <div style="font-size: 2rem; margin-bottom: 8px;"></div>
         <div>No incidents match the active filters.</div>
         <a href="/reports" style="color: #2563eb; font-size: 0.875rem;">Clear filters</a>
     </div>
@@ -318,7 +318,7 @@
 <!-- SECTION 3 User Activity Summary -->
 <div class="card" style="padding: 0; margin-bottom: 24px;">
     <div style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0;">👥 User Activity</h2>
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0;">User Activity</h2>
         <a href="/reports/activity_logs" style="font-size: 0.85rem; color: #2563eb; text-decoration: none; font-weight: 500;">View All &rarr;</a>
     </div>
     
@@ -355,7 +355,7 @@
 <!-- SECTION 4 Export Data -->
 <div class="card">
     <div style="margin-bottom: 20px;">
-        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">📥 Export Data</h2>
+        <h2 style="font-size: 1.1rem; color: var(--text-primary); margin: 0 0 4px 0;">Export Data</h2>
         {% if active_filters and (active_filters.status or active_filters.severity or active_filters.type) %}
         <div style="font-size: 0.85rem; color: var(--text-secondary);">Filtered export available — or use the full exports below.</div>
         {% endif %}
@@ -364,9 +364,9 @@
     <!-- Filtered export button (only shown when a filter is active) -->
     {% if active_filters and (active_filters.status or active_filters.severity or active_filters.type) %}
     <div style="margin-bottom: 16px; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-        <span style="font-size: 0.875rem; color: #1e40af; font-weight: 600;">📊 Export filtered incidents only:</span>
+        <span style="font-size: 0.875rem; color: #1e40af; font-weight: 600;">Export filtered incidents only:</span>
         <a href="/reports/export/incidents?{% if active_filters.status %}status={{ active_filters.status }}{% endif %}{% if active_filters.severity %}&severity={{ active_filters.severity }}{% endif %}{% if active_filters.type %}&type={{ active_filters.type }}{% endif %}" class="export-button" style="background: #2563eb; color: white; border-color: #2563eb;">
-            <span>📊</span> Export Filtered Incidents ({{ filtered_incidents|length }} rows)
+            Export Filtered Incidents ({{ filtered_incidents|length }} rows)
         </a>
     </div>
     {% endif %}
@@ -374,13 +374,13 @@
     <!-- Always-visible full exports -->
     <div class="export-buttons-row">
         <a href="/reports/export/incidents" class="export-button">
-            <span>📊</span> Export All Incidents (CSV)
+            Export All Incidents (CSV)
         </a>
         <a href="/reports/export/clusters" class="export-button">
-            <span>🔗</span> Export Clusters (CSV)
+            Export Clusters (CSV)
         </a>
         <a href="/reports/export/activity" class="export-button">
-            <span>👥</span> Export Activity Log (CSV)
+            Export Activity Log (CSV)
         </a>
     </div>
 </div>

@@ -19,11 +19,11 @@
 
 <!-- SETTINGS TABS -->
 <div class="settings-tabs-nav">
-    <button class="settings-tab active" data-panel="tab-algo">🤖 Algorithm Configuration</button>
-    <button class="settings-tab" data-panel="tab-sla">⏱ SLA Configuration</button>
-    <button class="settings-tab" data-panel="tab-risk">📊 Risk Scoring</button>
-    <button class="settings-tab" data-panel="tab-sys">⚙️ System Configuration</button>
-    <button class="settings-tab" data-panel="tab-test">🔬 Algorithm Testing</button>
+    <button class="settings-tab active" data-panel="tab-algo">Algorithm Configuration</button>
+    <button class="settings-tab" data-panel="tab-sla">SLA Configuration</button>
+    <button class="settings-tab" data-panel="tab-risk">Risk Scoring</button>
+    <button class="settings-tab" data-panel="tab-sys">System Configuration</button>
+    <button class="settings-tab" data-panel="tab-test">Algorithm Testing</button>
     <!-- Hidden reset tab hook -->
     <button class="settings-tab" data-panel="tab-reset" style="display:none"></button>
 </div>
@@ -31,14 +31,14 @@
 <!-- TAB 1: Algorithm Configuration -->
 <div id="tab-algo" class="tab-panel active">
     <div class="algorithm-section" style="background: white; margin-bottom: 24px;">
-        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">🤖 Algorithm Configuration</div>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">Algorithm Configuration</div>
         <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Configure the correlation and similarity detection algorithms</div>
         
         <div class="two-column-settings-grid">
             <!-- LEFT: Correlation -->
             <div class="algorithm-section">
                 <div class="algorithm-section-title">
-                    🔗 Correlation Engine
+                    Correlation Engine
                     <span class="active-badge">Active</span>
                 </div>
                 
@@ -66,7 +66,7 @@
             <!-- RIGHT: Similarity -->
             <div class="algorithm-section">
                 <div class="algorithm-section-title">
-                    🔍 Similarity Engine
+                    Similarity Engine
                     <span class="active-badge">Active</span>
                 </div>
                 
@@ -90,14 +90,14 @@
             </div>
         </div>
         
-        <button id="saveAlgorithmBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Save Algorithm Settings</button>
+        <button id="saveAlgorithmBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Algorithm Settings</button>
     </div>
 </div>
 
 <!-- TAB 2: SLA Configuration -->
 <div id="tab-sla" class="tab-panel">
     <div class="algorithm-section" style="background: white;">
-        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">⏱ SLA Configuration</div>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">SLA Configuration</div>
         <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Set response time limits for each priority level. Breaches trigger automatic alerts.</div>
         
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; color: #1e3a8a;">
@@ -134,14 +134,14 @@
         
         <div id="slaIndicator" class="validation-ind valid">✅ SLA hierarchy is valid</div>
         
-        <button id="saveSlaBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Save SLA Settings</button>
+        <button id="saveSlaBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save SLA Settings</button>
     </div>
 </div>
 
 <!-- TAB 3: Risk Scoring -->
 <div id="tab-risk" class="tab-panel">
     <div class="algorithm-section" style="background: white;">
-        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">📊 Risk Scoring Weights</div>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">Risk Scoring Weights</div>
         <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Adjust how each factor contributes to the overall risk score calculation</div>
         
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; color: #1e3a8a;">
@@ -210,14 +210,14 @@
             Risk Score = (Asset×<span id="f1">30</span>% + Severity×<span id="f2">30</span>% + Exposure×<span id="f3">15</span>% + Users×<span id="f4">20</span>% + Repeat×<span id="f5">5</span>%) / 5 × 100
         </div>
         
-        <button id="saveWeightsBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">💾 Save Risk Weights</button>
+        <button id="saveWeightsBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">Save Risk Weights</button>
     </div>
 </div>
 
 <!-- TAB 4: System Configuration -->
 <div id="tab-sys" class="tab-panel">
     <div class="algorithm-section" style="background: white;">
-        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 20px;">⚙️ System Configuration</div>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 20px;">System Configuration</div>
         
         <div class="two-column-settings-grid">
             <div>
@@ -271,25 +271,25 @@
         </div>
         
         <div class="data-management-section">
-            <h4 style="margin: 0 0 10px 0;">🗄️ Data Management</h4>
+            <h4 style="margin: 0 0 10px 0;">Data Management</h4>
             <div style="background: #fff7ed; padding: 12px; border: 1px solid #fed7aa; border-radius: 6px; color: #c2410c; font-size: 0.85rem; margin-bottom: 14px;">
                 ⚠️ These actions affect real data. Use with caution.
             </div>
             <div class="export-buttons">
-                <a href="/reports/export/incidents" class="btn btn-outline" style="font-size: 0.85rem;">📥 Export All Incidents (CSV)</a>
-                <a href="/reports/export/clusters" class="btn btn-outline" style="font-size: 0.85rem;">📥 Export All Clusters (CSV)</a>
-                <a href="/reports/export/activity" class="btn btn-outline" style="font-size: 0.85rem;">📥 Export Activity Log (CSV)</a>
+                <a href="/reports/export/incidents" class="btn btn-outline" style="font-size: 0.85rem;">Export All Incidents (CSV)</a>
+                <a href="/reports/export/clusters" class="btn btn-outline" style="font-size: 0.85rem;">Export All Clusters (CSV)</a>
+                <a href="/reports/export/activity" class="btn btn-outline" style="font-size: 0.85rem;">Export Activity Log (CSV)</a>
             </div>
         </div>
         
-        <button id="saveSystemBtn" class="btn btn-primary" style="width: 100%; margin-top: 24px;">💾 Save System Settings</button>
+        <button id="saveSystemBtn" class="btn btn-primary" style="width: 100%; margin-top: 24px;">Save System Settings</button>
     </div>
 </div>
 
 <!-- TAB 5: Algorithm Testing & Reset -->
 <div id="tab-test" class="tab-panel">
     <div class="algorithm-section" style="background: white;">
-        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">🔬 Algorithm Testing</div>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">Algorithm Testing</div>
         <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Test both algorithms against real incidents in your database</div>
         
         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 24px; font-size: 0.85rem; color: #92400e;">
@@ -298,7 +298,7 @@
         
         <div class="two-column-settings-grid">
             <div class="test-section">
-                <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px;">🔗 Test Correlation Engine</h4>
+                <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px;">Test Correlation Engine</h4>
                 <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Select an incident to run the correlation algorithm against all incidents in the last {{ settings.get('correlation_time_window_hours', 48) }}h</div>
                 
                 <select id="testCorrelationIncident" class="form-control" style="width: 100%; margin-bottom: 12px;">
@@ -313,7 +313,7 @@
             </div>
             
             <div class="test-section">
-                <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px;">🔍 Test Similarity Engine</h4>
+                <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px;">Test Similarity Engine</h4>
                 <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Select an incident to find matching logical patterns across historical databases inside the system.</div>
                 
                 <select id="testSimilarityIncident" class="form-control" style="width: 100%; margin-bottom: 12px;">
@@ -333,7 +333,7 @@
 
 <div id="tab-reset" class="tab-panel">
     <div class="reset-section">
-        <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px; color:#991b1b;">🔄 Reset All Settings</h4>
+        <h4 style="margin: 0 0 8px 0; display:flex; align-items:center; gap:6px; color:#991b1b;">Reset All Settings</h4>
         <div style="font-size: 0.85rem; color: #991b1b; margin-bottom: 16px;">
             This will reset ALL settings to their original default values. This cannot be undone.
         </div>
