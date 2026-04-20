@@ -47,11 +47,12 @@ def get_logo_base64():
     return ""
 
 from flask import (Flask, render_template,
-    redirect, url_for, flash, request, jsonify, Response)
+    redirect, url_for, flash, request, jsonify, Response, session)
 from flask_login import (login_required, current_user)
 from auth import auth, login_manager
 from database import (get_db_connection, init_db,
     create_default_admin)
+from datetime import timedelta
 
 ROOT = os.path.dirname(BACKEND_DIR)
 
@@ -59,6 +60,20 @@ app = Flask(__name__,
     template_folder=os.path.join(ROOT, 'frontend', 'templates'),
     static_folder=os.path.join(ROOT, 'frontend', 'static'))
 app.secret_key = 'cyberir-secret-key-2026'
+
+@app.before_request
+def apply_session_timeout():
+    if request.path.startswith('/static/'):
+        return
+    session.permanent = True
+    try:
+        conn = get_db_connection()
+        row = conn.execute("SELECT setting_value FROM settings WHERE setting_key='session_timeout'").fetchone()
+        conn.close()
+        timeout = int(row['setting_value']) if row else 60
+    except:
+        timeout = 60
+    app.permanent_session_lifetime = timedelta(minutes=timeout)
 
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
