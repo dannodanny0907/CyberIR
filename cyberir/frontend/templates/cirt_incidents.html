@@ -47,11 +47,13 @@
 <div class="card full-height">
     <div class="action-bar">
         <div>
-            <a href="/cirt/incidents/export" class="btn-primary" style="text-decoration:none; padding:8px 16px;">📥 Export CSV</a>
+            <a href="/cirt/incidents/export" class="btn-primary" style="text-decoration:none; padding:8px 16px;">📥
+                Export CSV</a>
         </div>
         <div class="search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" class="search-input" placeholder="Search CIRT incidents..." value="{{ search }}">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search CIRT incidents..."
+                value="{{ search }}">
         </div>
     </div>
 
@@ -62,22 +64,25 @@
         <input type="hidden" name="page" id="hiddenPage" value="1">
 
         <select name="status" class="filter-select">
-            <option value="All Statuses" {% if status == 'All Statuses' or not status %}selected{% endif %}>All Statuses</option>
-            <option value="Open" {% if status == 'Open' %}selected{% endif %}>Open</option>
-            <option value="Investigating" {% if status == 'Investigating' %}selected{% endif %}>Investigating</option>
-            <option value="Resolved" {% if status == 'Resolved' %}selected{% endif %}>Resolved</option>
-            <option value="Closed" {% if status == 'Closed' %}selected{% endif %}>Closed</option>
+            <option value="All Statuses" {% if status=='All Statuses' or not status %}selected{% endif %}>All Statuses
+            </option>
+            <option value="Open" {% if status=='Open' %}selected{% endif %}>Open</option>
+            <option value="Investigating" {% if status=='Investigating' %}selected{% endif %}>Investigating</option>
+            <option value="Resolved" {% if status=='Resolved' %}selected{% endif %}>Resolved</option>
+            <option value="Closed" {% if status=='Closed' %}selected{% endif %}>Closed</option>
         </select>
 
         <select name="severity" class="filter-select">
-            <option value="All Severities" {% if severity == 'All Severities' or not severity %}selected{% endif %}>All Severities</option>
-            <option value="Catastrophic" {% if severity == 'Catastrophic' %}selected{% endif %}>Catastrophic</option>
-            <option value="Major" {% if severity == 'Major' %}selected{% endif %}>Major</option>
+            <option value="All Severities" {% if severity=='All Severities' or not severity %}selected{% endif %}>All
+                Severities</option>
+            <option value="Catastrophic" {% if severity=='Catastrophic' %}selected{% endif %}>Catastrophic</option>
+            <option value="Major" {% if severity=='Major' %}selected{% endif %}>Major</option>
         </select>
-        
+
         {% if status != 'All Statuses' or severity != 'All Severities' or search %}
         <span class="filter-active-badge">Active Filters</span>
-        <button type="button" class="clear-filters-btn" id="clearFiltersBtn" onclick="window.location.href='/cirt/incidents'">Clear Filters</button>
+        <button type="button" class="clear-filters-btn" id="clearFiltersBtn"
+            onclick="window.location.href='/cirt/incidents'">Clear Filters</button>
         {% endif %}
     </form>
 
@@ -86,26 +91,41 @@
         <table class="incidents-table">
             <thead>
                 <tr>
-                    <th data-sort="incident_id" class="sortable">Incident ID <span class="sort-indicator {% if sort == 'incident_id' %}active{% endif %}">{{ '▼' if sort == 'incident_id' and order == 'desc' else ('▲' if sort == 'incident_id' else '▼') }}</span></th>
-                    <th data-sort="title" class="sortable">Title <span class="sort-indicator {% if sort == 'title' %}active{% endif %}">{{ '▼' if sort == 'title' and order == 'desc' else ('▲' if sort == 'title' else '▼') }}</span></th>
+                    <th data-sort="incident_id" class="sortable">Incident ID <span
+                            class="sort-indicator {% if sort == 'incident_id' %}active{% endif %}">{{ '▼' if sort ==
+                            'incident_id' and order == 'desc' else ('▲' if sort == 'incident_id' else '▼') }}</span>
+                    </th>
+                    <th data-sort="title" class="sortable">Title <span
+                            class="sort-indicator {% if sort == 'title' %}active{% endif %}">{{ '▼' if sort == 'title'
+                            and order == 'desc' else ('▲' if sort == 'title' else '▼') }}</span></th>
                     <th>Type</th>
-                    <th data-sort="priority" class="sortable">Severity <span class="sort-indicator {% if sort == 'priority' %}active{% endif %}">{{ '▼' if sort == 'priority' and order == 'desc' else ('▲' if sort == 'priority' else '▼') }}</span></th>
-                    <th data-sort="status" class="sortable">Status <span class="sort-indicator {% if sort == 'status' %}active{% endif %}">{{ '▼' if sort == 'status' and order == 'desc' else ('▲' if sort == 'status' else '▼') }}</span></th>
-                    <th data-sort="risk_score" class="sortable">Risk Score <span class="sort-indicator {% if sort == 'risk_score' %}active{% endif %}">{{ '▼' if sort == 'risk_score' and order == 'desc' else ('▲' if sort == 'risk_score' else '▼') }}</span></th>
-                    <th data-sort="detected_datetime" class="sortable">Detected/Reported <span class="sort-indicator {% if sort == 'detected_datetime' %}active{% endif %}">{{ '▼' if sort == 'detected_datetime' and order == 'desc' else ('▲' if sort == 'detected_datetime' else '▼') }}</span></th>
+                    <th data-sort="priority" class="sortable">Severity <span
+                            class="sort-indicator {% if sort == 'priority' %}active{% endif %}">{{ '▼' if sort ==
+                            'priority' and order == 'desc' else ('▲' if sort == 'priority' else '▼') }}</span></th>
+                    <th data-sort="status" class="sortable">Status <span
+                            class="sort-indicator {% if sort == 'status' %}active{% endif %}">{{ '▼' if sort == 'status'
+                            and order == 'desc' else ('▲' if sort == 'status' else '▼') }}</span></th>
+                    <th data-sort="risk_score" class="sortable">Risk Score <span
+                            class="sort-indicator {% if sort == 'risk_score' %}active{% endif %}">{{ '▼' if sort ==
+                            'risk_score' and order == 'desc' else ('▲' if sort == 'risk_score' else '▼') }}</span></th>
+                    <th data-sort="detected_datetime" class="sortable">Detected/Reported <span
+                            class="sort-indicator {% if sort == 'detected_datetime' %}active{% endif %}">{{ '▼' if sort
+                            == 'detected_datetime' and order == 'desc' else ('▲' if sort == 'detected_datetime' else
+                            '▼') }}</span></th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for inc in incidents %}
                 <tr>
-                    <td><a href="/incidents/{{ inc.incident_id }}" class="incident-id-link">{{ inc.incident_id }}</a></td>
+                    <td><a href="/incidents/{{ inc.incident_id }}" class="incident-id-link">{{ inc.incident_id }}</a>
+                    </td>
                     <td>{{ inc.title[:40] }}{% if inc.title|length > 40 %}...{% endif %}</td>
                     <td>
                         {% for type in (inc.incident_type or '').split(', ') %}
-                            {% if type.strip() %}
-                            <span class="type-dot"></span><span style="font-size: 0.8rem">{{ type.strip() }}</span><br>
-                            {% endif %}
+                        {% if type.strip() %}
+                        <span class="type-dot"></span><span style="font-size: 0.8rem">{{ type.strip() }}</span><br>
+                        {% endif %}
                         {% endfor %}
                     </td>
                     <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
@@ -114,12 +134,15 @@
                         <div style="font-weight: 600; font-size: 0.9rem;">{{ inc.risk_score }}</div>
                         <div class="risk-score-bar">
                             {% set color = '#dc2626' if inc.priority == 'Catastrophic' else '#ea580c' %}
-                            <div class="risk-score-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};"></div>
+                            <div class="risk-score-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};">
+                            </div>
                         </div>
                     </td>
-                    <td style="font-size: 0.8rem; color: #64748b;">{{ (inc.detected_datetime or inc.reported_date)[:10] }}</td>
+                    <td style="font-size: 0.8rem; color: #64748b;">{{ (inc.detected_datetime or inc.reported_date)[:10]
+                        }}</td>
                     <td>
-                        <a href="/incidents/{{ inc.incident_id }}" class="btn-primary" style="padding:4px 8px; text-decoration:none; font-size:0.75rem;">View</a>
+                        <a href="/incidents/{{ inc.incident_id }}" class="btn-primary"
+                            style="padding:4px 8px; text-decoration:none; font-size:0.75rem;">View</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -129,7 +152,8 @@
         <div class="empty-state">
             <div class="empty-icon">🚨</div>
             <div class="empty-title">No escalated incidents at this time</div>
-            <div class="empty-subtitle">Incidents with Major or Catastrophic severity are automatically escalated to CIRT.</div>
+            <div class="empty-subtitle">Incidents with Major or Catastrophic severity are automatically escalated to
+                CIRT.</div>
         </div>
         {% endif %}
     </div>
@@ -140,24 +164,28 @@
         {% set start_item = (page - 1) * per_page + 1 if total_count > 0 else 0 %}
         {% set end_item = start_item + incidents|length - 1 if total_count > 0 else 0 %}
         <div style="font-size: 0.85rem; color: #64748b;">
-            Showing <span>{{ start_item }}</span>-<span>{{ end_item }}</span> of <span>{{ total_count }}</span> incidents
+            Showing <span>{{ start_item }}</span>-<span>{{ end_item }}</span> of <span>{{ total_count }}</span>
+            incidents
         </div>
-        
+
         {% if total_pages > 1 %}
         <div style="display:flex; gap: 8px; align-items:center;">
             {% if page > 1 %}
-            <button class="page-btn" onclick="window.location.href='?page={{ page - 1 }}&sort={{ sort }}&order={{ order }}&status={{ status }}&severity={{ severity }}&search={{ search }}'">Previous</button>
+            <button class="page-btn"
+                onclick="window.location.href='?page={{ page - 1 }}&sort={{ sort }}&order={{ order }}&status={{ status }}&severity={{ severity }}&search={{ search }}'">Previous</button>
             {% endif %}
-            
+
             {% for p in range(1, total_pages + 1) %}
-                {% if p >= page - 2 and p <= page + 2 %}
-                <button class="page-btn {% if p == page %}active{% endif %}" onclick="window.location.href='?page={{ p }}&sort={{ sort }}&order={{ order }}&status={{ status }}&severity={{ severity }}&search={{ search }}'">{{ p }}</button>
+            {% if p >= page - 2 and p <= page + 2 %} <button class="page-btn {% if p == page %}active{% endif %}"
+                onclick="window.location.href='?page={{ p }}&sort={{ sort }}&order={{ order }}&status={{ status }}&severity={{ severity }}&search={{ search }}'">
+                {{ p }}</button>
                 {% endif %}
-            {% endfor %}
-            
-            {% if page < total_pages %}
-            <button class="page-btn" onclick="window.location.href='?page={{ page + 1 }}&sort={{ sort }}&order={{ order }}&status={{ status }}&severity={{ severity }}&search={{ search }}'">Next</button>
-            {% endif %}
+                {% endfor %}
+
+                {% if page < total_pages %} <button class="page-btn"
+                    onclick="window.location.href='?page={{ page + 1 }}&sort={{ sort }}&order={{ order }}&status={{ status }}&severity={{ severity }}&search={{ search }}'">
+                    Next</button>
+                    {% endif %}
         </div>
         {% endif %}
     </div>
