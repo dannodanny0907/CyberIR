@@ -73,7 +73,7 @@
     <div class="profile-left-col">
         <!-- Card 1: Edit Profile -->
         <div class="card" style="margin-bottom: 20px;">
-            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">✏️ Edit Profile</h3>
+            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">Edit Profile</h3>
             
             <div class="form-field">
                 <label class="setting-label">Full Name</label>
@@ -99,18 +99,18 @@
                 <div class="setting-subtext" style="margin-top:4px;">Role is assigned by Administrator</div>
             </div>
             
-            <button id="saveProfileBtn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">💾 Save Profile</button>
+            <button id="saveProfileBtn" class="btn btn-primary" style="width: 100%; margin-top: 8px;">Save Profile</button>
         </div>
         
         <!-- Card 2: Change Password -->
         <div class="card">
-            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">🔒 Change Password</h3>
+            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">Change Password</h3>
             
             <div class="form-field">
                 <label class="setting-label">Current Password</label>
                 <div class="password-field-container">
                     <input type="password" id="currentPassword" class="form-control" placeholder="Enter current password" style="width: 100%;">
-                    <button type="button" class="toggle-password" data-target="currentPassword">👁️</button>
+                    <button type="button" class="toggle-password" data-target="currentPassword">Show</button>
                 </div>
             </div>
             
@@ -118,7 +118,7 @@
                 <label class="setting-label">New Password</label>
                 <div class="password-field-container">
                     <input type="password" id="newPassword" class="form-control" placeholder="Minimum 8 characters" style="width: 100%;">
-                    <button type="button" class="toggle-password" data-target="newPassword">👁️</button>
+                    <button type="button" class="toggle-password" data-target="newPassword">Show</button>
                 </div>
                 <div class="password-strength-bar-container">
                     <div id="strengthBar" class="password-strength-fill" style="width:0%;"></div>
@@ -130,19 +130,18 @@
                 <label class="setting-label">Confirm New Password</label>
                 <div class="password-field-container">
                     <input type="password" id="confirmPassword" class="form-control" placeholder="Re-enter new password" style="width: 100%;">
-                    <button type="button" class="toggle-password" data-target="confirmPassword">👁️</button>
+                    <button type="button" class="toggle-password" data-target="confirmPassword">Show</button>
                 </div>
                 <div id="matchIndicator" class="match-indicator"></div>
             </div>
-            
-            <button id="changePasswordBtn" class="btn" style="width: 100%; background: #7c3aed; color: white; border: none; margin-top: 8px;">🔒 Change Password</button>
+            <button id="changePasswordBtn" class="btn" style="width: 100%; background: #7c3aed; color: white; border: none; margin-top: 8px;">Change Password</button>
         </div>
     </div>
     
     <div class="profile-right-col">
         <!-- Card 1: Notification Preferences -->
         <div class="card" style="margin-bottom: 20px;">
-            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">🔔 Notification Preferences</h3>
+            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">Notification Preferences</h3>
             <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px;">Choose which alerts you receive</div>
             
             <div class="toggle-switch-container">
@@ -213,12 +212,12 @@
                 </label>
             </div>
             
-            <button id="savePrefsBtn" class="btn btn-primary" style="width: 100%; margin-top: 16px;">💾 Save Preferences</button>
+            <button id="savePrefsBtn" class="btn btn-primary" style="width: 100%; margin-top: 16px;">Save Preferences</button>
         </div>
         
         <!-- Card 2: Display Preferences -->
         <div class="card" style="margin-bottom: 20px;">
-            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">🎨 Display Preferences</h3>
+            <h3 style="margin: 0 0 16px 0; font-size: 1.1rem;">Display Preferences</h3>
             
             <div class="toggle-switch-container">
                 <div class="toggle-info">
@@ -245,7 +244,7 @@
         
         <!-- Card 3: Recent Activity -->
         <div class="card">
-            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">📋 Recent Activity</h3>
+            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">Recent Activity</h3>
             <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px;">Your last 10 actions in the system</div>
             
             <div class="activity-list">
@@ -254,19 +253,6 @@
                 {% else %}
                     {% for a in activity %}
                     <div class="activity-item">
-                        <div class="activity-icon">
-                            {% if a.action_type == 'LOGIN' %}🔑
-                            {% elif a.action_type == 'LOGOUT' %}🚪
-                            {% elif a.action_type == 'CREATE_INCIDENT' %}📝
-                            {% elif a.action_type == 'UPDATE_INCIDENT' %}✏️
-                            {% elif a.action_type == 'RESOLVE_INCIDENT' %}✅
-                            {% elif a.action_type == 'ASSIGN_INCIDENT' %}👤
-                            {% elif a.action_type == 'CREATE_USER' %}👥
-                            {% elif a.action_type == 'UPDATE_USER' %}🔧
-                            {% elif a.action_type == 'DELETE_USER' %}🗑️
-                            {% elif a.action_type == 'UPDATE_SETTINGS' %}⚙️
-                            {% else %}📌{% endif %}
-                        </div>
                         <div class="activity-text">
                             {% if a.action_type == 'LOGIN' %}Logged in
                             {% elif a.action_type == 'LOGOUT' %}Logged out
