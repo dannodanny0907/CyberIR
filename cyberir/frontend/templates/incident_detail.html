@@ -379,7 +379,7 @@
                 {% endif %}
             </div>
             
-            {% if current_user.role in ['Admin', 'Analyst'] %}
+            {% if current_user.role in ['Admin', 'Analyst', 'CIRT'] %}
             <button id="showAssignBtn" class="btn-secondary" style="width:100%; font-size:0.85rem; padding:6px;">Assign / Reassign</button>
             <form id="assignForm" style="display:none; margin-top:8px;" data-incident-id="{{ incident.incident_id }}">
                 <div class="assign-dropdown-row">
@@ -402,7 +402,7 @@
                 <span class="badge status-{{ incident.status|lower|replace(' ', '-') }}" style="font-size: 1.1rem; padding: 8px 24px;">{{ incident.status }}</span>
             </div>
             
-            {% if current_user.role in ['Admin', 'Analyst'] %}
+            {% if current_user.role in ['Admin', 'Analyst', 'CIRT'] %}
                 {% if incident.status == 'Open' %}
                 <form class="status-form" data-status="Investigating" data-incident-id="{{ incident.incident_id }}">
                     <button type="submit" class="status-action-btn" style="background:#ea580c; color:white; border:none; cursor:pointer;">Start Investigation</button>
