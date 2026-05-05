@@ -404,8 +404,12 @@
       <table style="width:100%; border-collapse: collapse; margin-top: 4px;">
         <tr>
           <td style="width:40%; vertical-align:bottom;">
-            <div style="font-size:10pt">{{ assigned_name or '—' }}</div>
-            <div class="sig-line">Name</div>
+            {% if assigned_name and assigned_name != '—' %}
+              <div style="font-size:10pt">{{ assigned_name | upper }}</div>
+            {% else %}
+              <div style="font-size:10pt">&nbsp;</div>
+              <div class="sig-line">Name</div>
+            {% endif %}
           </td>
           <td style="width:10%;"></td>
           <td style="width:35%; vertical-align:bottom;">
@@ -427,8 +431,7 @@
       <table style="width:100%; border-collapse: collapse; margin-top: 4px;">
         <tr>
           <td style="width:40%; vertical-align:bottom;">
-            <div style="font-size:10pt">{{ engineer_name }}</div>
-            <div class="sig-line">Name</div>
+            <div style="font-size:10pt">{{ engineer_name | upper }}</div>
           </td>
           <td style="width:10%;"></td>
           <td style="width:35%; vertical-align:bottom;">
@@ -450,8 +453,7 @@
       <table style="width:100%; border-collapse: collapse; margin-top: 4px;">
         <tr>
           <td style="width:40%; vertical-align:bottom;">
-            <div style="font-size:10pt">{{ manager_name }}</div>
-            <div class="sig-line">Name</div>
+            <div style="font-size:10pt">{{ manager_name | upper }}</div>
           </td>
           <td style="width:10%;"></td>
           <td style="width:35%; vertical-align:bottom;">

@@ -406,34 +406,50 @@ document.getElementById('pdfManagerName')?.addEventListener('input', function() 
     if (span) span.textContent = this.value;
 });
 
-document.getElementById('downloadPdfBtn')?.addEventListener('click', async function() {
+document.getElementById('downloadPdfBtn')?.addEventListener('click', async function(e) {
+    e.preventDefault();
+    const btn = this;
     const incidentId = document.getElementById('exportPdfBtn').dataset.incidentId;
     const engineerName = document.getElementById('pdfEngineerName').value;
     const managerName = document.getElementById('pdfManagerName').value;
     
-    this.textContent = '⏳ Generating...';
-    this.disabled = true;
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
     
-    const r = await fetch('/incidents/generate-pdf/' + incidentId, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ engineer_name: engineerName, manager_name: managerName })
-    });
-    
-    if (r.ok) {
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = incidentId + '_report.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-        closePdfModal();
-    } else {
-        alert('PDF generation failed.');
+    try {
+        const r = await fetch('/incidents/generate-pdf/' + incidentId, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ engineer_name: engineerName, manager_name: managerName })
+        });
+        
+        if (r.ok) {
+            const blob = await r.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = incidentId + '_report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            closePdfModal();
+        } else {
+            try {
+                const errData = await r.json();
+                alert('PDF generation failed:\n' + errData.message);
+            } catch (e) {
+                alert('PDF generation failed with status: ' + r.status);
+            }
+        }
+    } catch (error) {
+        console.error('PDF Error:', error);
+        alert('Error: ' + error.message + '\nLine: ' + error.lineNumber);
+    } finally {
+        btn.textContent = '⬇️ Download PDF';
+        btn.disabled = false;
     }
-    this.textContent = '⬇️ Download PDF';
-    this.disabled = false;
 });
 
 function closePdfModal() {

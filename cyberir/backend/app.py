@@ -601,19 +601,23 @@ def generate_pdf(incident_id):
     if not incident:
         return jsonify({"success": False, "message": "Not found"}), 404
         
-    html_content = render_template('incident_pdf.html',
-        incident=dict(incident),
-        assigned_name=assigned_name,
-        engineer_name=engineer_name,
-        manager_name=manager_name,
-        logo_data=get_logo_base64()
-    )
-    
-    pdf_bytes = generate_pdf_from_html(html_content)
-    if pdf_bytes is None:
-        return jsonify({"success": False, "message": "PDF library not installed"}), 500
+    try:
+        html_content = render_template('incident_pdf.html',
+            incident=dict(incident),
+            assigned_name=assigned_name,
+            engineer_name=engineer_name,
+            manager_name=manager_name,
+            logo_data=get_logo_base64()
+        )
         
-    return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'attachment; filename="{incident_id}_report.pdf"'})
+        pdf_bytes = generate_pdf_from_html(html_content)
+        if pdf_bytes is None:
+            return jsonify({"success": False, "message": "PDF library not installed"}), 500
+            
+        return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'attachment; filename="{incident_id}_report.pdf"'})
+    except Exception as e:
+        import traceback
+        return jsonify({"success": False, "message": f"Error: {str(e)}\n{traceback.format_exc()}"}), 500
 
 @app.template_filter('format_date')
 def format_date_filter(value):
