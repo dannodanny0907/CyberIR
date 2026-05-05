@@ -98,35 +98,35 @@
 <div id="tab-sla" class="tab-panel">
     <div class="algorithm-section" style="background: white;">
         <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">SLA Configuration</div>
-        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Set response time limits for each priority level. Breaches trigger automatic alerts.</div>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">Set response time limits for each severity level. Breaches trigger automatic alerts.</div>
         
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 0.85rem; color: #1e3a8a;">
             ⚡ SLA alerts are generated automatically when you visit the Alerts page. Incidents exceeding these limits will appear as SLA Breach alerts.
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-critical" style="width: 75px; text-align: center;">Catastrophic</span>
+            <span class="badge severity-critical" style="width: 75px; text-align: center;">Catastrophic</span>
             <input type="number" id="critical_sla" class="number-input" min="1" max="24" value="{{ settings.get('critical_sla_hours', 4) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="critSlaVal">{{ settings.get('critical_sla_hours', 4) }}</span> hour(s)</span>
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-high" style="width: 75px; text-align: center;">Major</span>
+            <span class="badge severity-high" style="width: 75px; text-align: center;">Major</span>
             <input type="number" id="high_sla" class="number-input" min="1" max="168" value="{{ settings.get('high_sla_hours', 24) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="highSlaVal">{{ settings.get('high_sla_hours', 24) }}</span> hour(s)</span>
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-medium" style="width: 75px; text-align: center;">Moderate</span>
+            <span class="badge severity-medium" style="width: 75px; text-align: center;">Moderate</span>
             <input type="number" id="medium_sla" class="number-input" min="1" max="720" value="{{ settings.get('medium_sla_hours', 72) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="medSlaVal">{{ settings.get('medium_sla_hours', 72) }}</span> hour(s)</span>
         </div>
         
         <div class="sla-rows">
-            <span class="badge priority-low" style="width: 75px; text-align: center;">Minor</span>
+            <span class="badge severity-low" style="width: 75px; text-align: center;">Minor</span>
             <input type="number" id="low_sla" class="number-input" min="1" max="2160" value="{{ settings.get('low_sla_hours', 168) }}">
             <span class="unit-label">hours</span>
             <span class="helper-text">Alert triggers after <span id="lowSlaVal">{{ settings.get('low_sla_hours', 168) }}</span> hour(s)</span>

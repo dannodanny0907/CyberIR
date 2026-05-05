@@ -99,9 +99,9 @@
                             class="sort-indicator {% if sort == 'title' %}active{% endif %}">{{ '▼' if sort == 'title'
                             and order == 'desc' else ('▲' if sort == 'title' else '▼') }}</span></th>
                     <th>Type</th>
-                    <th data-sort="priority" class="sortable">Severity <span
-                            class="sort-indicator {% if sort == 'priority' %}active{% endif %}">{{ '▼' if sort ==
-                            'priority' and order == 'desc' else ('▲' if sort == 'priority' else '▼') }}</span></th>
+                    <th data-sort="severity" class="sortable">Severity <span
+                            class="sort-indicator {% if sort == 'severity' %}active{% endif %}">{{ '▼' if sort ==
+                            'severity' and order == 'desc' else ('▲' if sort == 'severity' else '▼') }}</span></th>
                     <th data-sort="status" class="sortable">Status <span
                             class="sort-indicator {% if sort == 'status' %}active{% endif %}">{{ '▼' if sort == 'status'
                             and order == 'desc' else ('▲' if sort == 'status' else '▼') }}</span></th>
@@ -128,12 +128,12 @@
                         {% endif %}
                         {% endfor %}
                     </td>
-                    <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                    <td><span class="badge severity-{{ inc.severity|lower }}">{{ inc.severity }}</span></td>
                     <td><span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span></td>
                     <td>
                         <div style="font-weight: 600; font-size: 0.9rem;">{{ inc.risk_score }}</div>
                         <div class="risk-score-bar">
-                            {% set color = '#dc2626' if inc.priority == 'Catastrophic' else '#ea580c' %}
+                            {% set color = '#dc2626' if inc.severity == 'Catastrophic' else '#ea580c' %}
                             <div class="risk-score-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};">
                             </div>
                         </div>

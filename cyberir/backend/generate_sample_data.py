@@ -371,10 +371,10 @@ def generate_incidents(conn, user_ids, admin_id):
     raw = (ac*0.30 + ts*0.30 + ve*0.15 + ua_score*0.20 + (5 if ir else 1)*0.05)
     risk_score = round((raw/5)*100, 2)
     
-    if risk_score >= 75: priority = "Catastrophic"
-    elif risk_score >= 50: priority = "Major"
-    elif risk_score >= 25: priority = "Moderate"
-    else: priority = "Minor"
+    if risk_score >= 75: severity = "Catastrophic"
+    elif risk_score >= 50: severity = "Major"
+    elif risk_score >= 25: severity = "Moderate"
+    else: severity = "Minor"
     
     assigned_to = analyst_ids[scenario['at']] if scenario['at'] is not None else None
     
@@ -421,7 +421,7 @@ def generate_incidents(conn, user_ids, admin_id):
         INSERT INTO incidents (
             incident_id, title, description, incident_type, affected_asset, affected_department,
             attack_indicators, asset_criticality, threat_severity, vulnerability_exposure,
-            users_affected, is_repeat, risk_score, priority, status, assigned_to,
+            users_affected, is_repeat, risk_score, severity, status, assigned_to,
             reported_date, investigating_started_date, resolved_date, closed_date,
             resolution_time_minutes, resolution_notes, created_by, updated_by,
             detection_method, contact_full_name, contact_job_title,
@@ -430,7 +430,7 @@ def generate_incidents(conn, user_ids, admin_id):
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ''', (
         incident_id, title, description, template['type'], affected_asset, department,
-        indicators, ac, ts, ve, ua, ir, risk_score, priority, status, assigned_to,
+        indicators, ac, ts, ve, ua, ir, risk_score, severity, status, assigned_to,
         reported_date, investigating_started_date, resolved_date, closed_date,
         resolution_time_minutes, resolution_notes, admin_id, updated_by,
         detection_method, contact_full_name, contact_job_title,

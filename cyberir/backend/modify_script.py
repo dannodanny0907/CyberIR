@@ -21,17 +21,17 @@ replacements = {
 for k, v in replacements.items():
     code = code.replace(k, v)
 
-# 2. Rename priority to severity for variable assignments safely.
+# 2. Rename severity to severity for variable assignments safely.
 # For log_incident:
-code = code.replace("priority = ('Catastrophic'", "severity = ('Catastrophic'")
-code = code.replace(",priority,", ",severity,")
-code = code.replace(",priority)", ",severity)")
-code = code.replace("priority_filter", "severity_filter")
-code = code.replace("incidents_by_priority", "incidents_by_severity")
-code = code.replace("request.args.get('priority'", "request.args.get('severity'")
-code = code.replace("sort == 'priority'", "sort == 'severity'")
-code = code.replace("d['priority']", "d['severity']")
-code = code.replace("incident['priority']", "incident['severity']")
+code = code.replace("severity = ('Catastrophic'", "severity = ('Catastrophic'")
+code = code.replace(",severity,", ",severity,")
+code = code.replace(",severity)", ",severity)")
+code = code.replace("severity_filter", "severity_filter")
+code = code.replace("incidents_by_severity", "incidents_by_severity")
+code = code.replace("request.args.get('severity'", "request.args.get('severity'")
+code = code.replace("sort == 'severity'", "sort == 'severity'")
+code = code.replace("d['severity']", "d['severity']")
+code = code.replace("incident['severity']", "incident['severity']")
 
 
 # 3. Add escalation logic to log_incident (specifically where it creates incident)
@@ -68,9 +68,9 @@ if os.path.exists(cor_path):
     for k, v in replacements.items():
         ccode = ccode.replace(k, v)
     
-    # Where severity is derived from priority in clusters
-    ccode = ccode.replace("d['priority']", "d['severity']")
-    ccode = ccode.replace("incident['priority']", "incident['severity']")
+    # Where severity is derived from severity in clusters
+    ccode = ccode.replace("d['severity']", "d['severity']")
+    ccode = ccode.replace("incident['severity']", "incident['severity']")
     with open(cor_path, "w", encoding="utf-8") as f:
         f.write(ccode)
 
@@ -82,8 +82,8 @@ if os.path.exists(sim_path):
     for k, v in replacements.items():
         scode = scode.replace(k, v)
 
-    scode = scode.replace("d['priority']", "d['severity']")
-    scode = scode.replace("incident['priority']", "incident['severity']")
+    scode = scode.replace("d['severity']", "d['severity']")
+    scode = scode.replace("incident['severity']", "incident['severity']")
     with open(sim_path, "w", encoding="utf-8") as f:
         f.write(scode)
 

@@ -157,7 +157,7 @@ def dashboard():
             "SELECT COUNT(*) as c FROM incidents WHERE status IN ('Resolved','Closed')"
         ).fetchone()['c']
         critical_incidents = conn.execute(
-            "SELECT COUNT(*) as c FROM incidents WHERE priority='Catastrophic' AND status NOT IN ('Resolved','Closed')"
+            "SELECT COUNT(*) as c FROM incidents WHERE severity='Catastrophic' AND status NOT IN ('Resolved','Closed')"
         ).fetchone()['c']
         active_clusters = conn.execute(
             "SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'"
@@ -169,7 +169,7 @@ def dashboard():
             "SELECT status, COUNT(*) as count FROM incidents GROUP BY status"
         ).fetchall()]
         incidents_by_severity = [dict(r) for r in conn.execute(
-            "SELECT priority, COUNT(*) as count FROM incidents WHERE priority IS NOT NULL GROUP BY priority"
+            "SELECT severity, COUNT(*) as count FROM incidents WHERE severity IS NOT NULL GROUP BY severity"
         ).fetchall()]
         incidents_by_type = [dict(r) for r in conn.execute(
             "SELECT incident_type, COUNT(*) as count FROM incidents GROUP BY incident_type ORDER BY count DESC"
@@ -265,11 +265,11 @@ def cirt_incidents():
     sort_raw = request.args.get('sort', 'detected_datetime')
     order_raw = request.args.get('order', 'desc').lower()
     
-    valid_sort_columns = ['incident_id', 'title', 'priority', 'status', 'risk_score', 'detected_datetime', 'reported_date']
+    valid_sort_columns = ['incident_id', 'title', 'severity', 'status', 'risk_score', 'detected_datetime', 'reported_date']
     sort_column = sort_raw if sort_raw in valid_sort_columns else 'detected_datetime'
     order_dir = 'DESC' if order_raw != 'asc' else 'ASC'
     
-    query = "SELECT *, priority AS severity FROM incidents WHERE escalated_to_cirt = 1"
+    query = "SELECT *, severity AS severity FROM incidents WHERE escalated_to_cirt = 1"
     params = []
     
     if status_filter != 'All Statuses':
@@ -281,7 +281,7 @@ def cirt_incidents():
             params.append(status_filter)
             
     if severity_filter != 'All Severities':
-        query += " AND priority = ?"
+        query += " AND severity = ?"
         params.append(severity_filter)
         
     if search_query:
@@ -294,7 +294,7 @@ def cirt_incidents():
     per_page = 20
     offset = (page - 1) * per_page
     
-    count_query = query.replace('SELECT *, priority AS severity', 'SELECT COUNT(*) as c').split('ORDER BY')[0]
+    count_query = query.replace('SELECT *, severity AS severity', 'SELECT COUNT(*) as c').split('ORDER BY')[0]
     total_count = conn.execute(count_query, params).fetchone()['c']
     total_pages = (total_count + per_page - 1) // per_page
     
@@ -305,8 +305,8 @@ def cirt_incidents():
     
     # Stats
     total_cirt = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE escalated_to_cirt = 1").fetchone()['c']
-    catastrophic_count = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority = 'Catastrophic' AND escalated_to_cirt = 1").fetchone()['c']
-    major_count = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority = 'Major' AND escalated_to_cirt = 1").fetchone()['c']
+    catastrophic_count = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity = 'Catastrophic' AND escalated_to_cirt = 1").fetchone()['c']
+    major_count = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity = 'Major' AND escalated_to_cirt = 1").fetchone()['c']
     open_cirt = conn.execute("SELECT COUNT(*) as c FROM incidents WHERE escalated_to_cirt = 1 AND status IN ('Open', 'Investigating')").fetchone()['c']
     
     conn.close()
@@ -343,14 +343,14 @@ def export_cirt_incidents():
     
     si = StringIO()
     cw = csv.writer(si)
-    cw.writerow(['incident_id', 'title', 'incident_type', 'priority', 'status', 'risk_score', 'affected_asset', 'affected_department', 'detected_datetime', 'reported_date', 'assigned_name'])
+    cw.writerow(['incident_id', 'title', 'incident_type', 'severity', 'status', 'risk_score', 'affected_asset', 'affected_department', 'detected_datetime', 'reported_date', 'assigned_name'])
     
     for inc in incidents:
         cw.writerow([
             inc['incident_id'],
             inc['title'],
             inc['incident_type'],
-            inc['priority'],
+            inc['severity'],
             inc['status'],
             inc['risk_score'],
             inc['affected_asset'],
@@ -392,7 +392,7 @@ def incidents():
             where_clauses.append("i.status=?")
             params.append(status_filter)
         if severity_filter and severity_filter not in ('', 'All Priorities', 'All Severities'):
-            where_clauses.append("i.priority=?")
+            where_clauses.append("i.severity=?")
             params.append(severity_filter)
         if type_filter and type_filter not in ('', 'All Types'):
             where_clauses.append("i.incident_type=?")
@@ -410,7 +410,7 @@ def incidents():
 
         where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
-        allowed = ['reported_date','risk_score','priority','status','incident_id','title','incident_type','affected_asset']
+        allowed = ['reported_date','risk_score','severity','status','incident_id','title','incident_type','affected_asset']
         if sort not in allowed: sort = 'reported_date'
         if order not in ('asc','desc'): order = 'desc'
         order_sql = 'DESC' if order == 'desc' else 'ASC'
@@ -522,7 +522,7 @@ def log_incident():
             from database import get_next_incident_id
             incident_id = get_next_incident_id()
             cursor = conn.execute(
-                "INSERT INTO incidents (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,priority,status,assigned_to,reported_date,resolution_notes,created_by,created_at,updated_at, contact_full_name, contact_job_title, contact_office, contact_work_phone, contact_mobile_phone, contact_additional, detection_method, detection_method_other, incident_type_other, impact_selections, impact_other, impact_additional, data_sensitivity_selections, data_sensitivity_other, data_sensitivity_additional, detected_datetime, incident_occurred_datetime, attack_source, affected_system_ips, attack_source_ips, affected_system_functions, affected_system_os, affected_system_location, affected_system_security_software, affected_systems_count, third_parties_involved) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Open',?,?,?,?,datetime('now'),datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO incidents (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,severity,status,assigned_to,reported_date,resolution_notes,created_by,created_at,updated_at, contact_full_name, contact_job_title, contact_office, contact_work_phone, contact_mobile_phone, contact_additional, detection_method, detection_method_other, incident_type_other, impact_selections, impact_other, impact_additional, data_sensitivity_selections, data_sensitivity_other, data_sensitivity_additional, detected_datetime, incident_occurred_datetime, attack_source, affected_system_ips, attack_source_ips, affected_system_functions, affected_system_os, affected_system_location, affected_system_security_software, affected_systems_count, third_parties_involved) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'Open',?,?,?,?,datetime('now'),datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (incident_id,title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,severity,assigned_to,reported_date,resolution_notes,current_user.id, contact_full_name, contact_job_title, contact_office, contact_work_phone, contact_mobile_phone, contact_additional, detection_method, detection_method_other, incident_type_other, impact_selections, impact_other, impact_additional, data_sensitivity_selections, data_sensitivity_other, data_sensitivity_additional, detected_datetime, incident_occurred_datetime, attack_source, affected_system_ips, attack_source_ips, affected_system_functions, affected_system_os, affected_system_location, affected_system_security_software, affected_systems_count, third_parties_involved))
             new_id = cursor.lastrowid
             conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,target_id,details) VALUES (?,'CREATE_INCIDENT','Incident',?,?)",[current_user.id,new_id,f"Created new incident {incident_id}: {title}"])
@@ -765,7 +765,7 @@ def edit_incident(incident_id):
             risk_score = round((raw/5)*100,2)
             severity = ('Catastrophic' if risk_score>=75 else 'Major' if risk_score>=50 else 'Moderate' if risk_score>=25 else 'Minor')
             conn.execute(
-                "UPDATE incidents SET title=?,description=?,incident_type=?,affected_asset=?,affected_department=?,users_affected=?,ip_address=?,attack_indicators=?,asset_criticality=?,threat_severity=?,vulnerability_exposure=?,is_repeat=?,risk_score=?,priority=?,assigned_to=?,reported_date=?,updated_at=datetime('now'),updated_by=?,contact_full_name=?,contact_job_title=?,contact_office=?,contact_work_phone=?,contact_mobile_phone=?,contact_additional=?,detection_method=?,detection_method_other=?,incident_type_other=?,impact_selections=?,impact_other=?,impact_additional=?,data_sensitivity_selections=?,data_sensitivity_other=?,data_sensitivity_additional=?,detected_datetime=?,incident_occurred_datetime=?,attack_source=?,affected_system_ips=?,attack_source_ips=?,affected_system_functions=?,affected_system_os=?,affected_system_location=?,affected_system_security_software=?,affected_systems_count=?,third_parties_involved=? WHERE incident_id=?",
+                "UPDATE incidents SET title=?,description=?,incident_type=?,affected_asset=?,affected_department=?,users_affected=?,ip_address=?,attack_indicators=?,asset_criticality=?,threat_severity=?,vulnerability_exposure=?,is_repeat=?,risk_score=?,severity=?,assigned_to=?,reported_date=?,updated_at=datetime('now'),updated_by=?,contact_full_name=?,contact_job_title=?,contact_office=?,contact_work_phone=?,contact_mobile_phone=?,contact_additional=?,detection_method=?,detection_method_other=?,incident_type_other=?,impact_selections=?,impact_other=?,impact_additional=?,data_sensitivity_selections=?,data_sensitivity_other=?,data_sensitivity_additional=?,detected_datetime=?,incident_occurred_datetime=?,attack_source=?,affected_system_ips=?,attack_source_ips=?,affected_system_functions=?,affected_system_os=?,affected_system_location=?,affected_system_security_software=?,affected_systems_count=?,third_parties_involved=? WHERE incident_id=?",
                 (title,description,incident_type,affected_asset,affected_department,users_affected,ip_address,attack_indicators,asset_criticality,threat_severity,vulnerability_exposure,is_repeat,risk_score,severity,assigned_to,reported_date,current_user.id,contact_full_name,contact_job_title,contact_office,contact_work_phone,contact_mobile_phone,contact_additional,detection_method,detection_method_other,incident_type_other,impact_selections,impact_other,impact_additional,data_sensitivity_selections,data_sensitivity_other,data_sensitivity_additional,detected_datetime,incident_occurred_datetime,attack_source,affected_system_ips,attack_source_ips,affected_system_functions,affected_system_os,affected_system_location,affected_system_security_software,affected_systems_count,third_parties_involved,incident_id))
             
             changes = []
@@ -774,7 +774,7 @@ def edit_incident(incident_id):
             if str(incident['assigned_to'] or '') != str(assigned_to or ''):
                 u = conn.execute("SELECT full_name FROM users WHERE id=?",[assigned_to]).fetchone() if assigned_to else None
                 changes.append(f"reassigned to {u['full_name'] if u else 'Unassigned'}")
-            if incident['priority'] != severity: changes.append(f'priority to {severity}')
+            if incident['severity'] != severity: changes.append(f'severity to {severity}')
             if incident['status'] != 'Open' and not changes: changes.append('general details')
             
             diff_text = f"Updated incident {incident['incident_id']}: modified " + ", ".join(changes) if changes else f"Updated incident {incident_id}"
@@ -1070,7 +1070,7 @@ def similarity():
         for r in rows:
             d = dict(r)
             d['similarity_score'] = float(d.get('similarity_score') or 0.0)
-            d['severity'] = d.get('priority') or 'Minor'
+            d['severity'] = d.get('severity') or 'Minor'
             d['status'] = d.get('status') or 'Open'
             d['similar_status'] = d.get('similar_status') or 'Unknown'
             d['title'] = d.get('title') or 'Untitled'
@@ -1215,7 +1215,7 @@ def reports():
 
         # Build filtered incidents query
         inc_query = """
-            SELECT i.incident_id, i.title, i.incident_type, i.priority,
+            SELECT i.incident_id, i.title, i.incident_type, i.severity,
                    i.status, i.risk_score, i.reported_date,
                    u.full_name as assigned_name
             FROM incidents i
@@ -1227,7 +1227,7 @@ def reports():
             inc_query += " AND i.status = ?"
             inc_params.append(status_filter)
         if severity_filter:
-            inc_query += " AND i.priority = ?"
+            inc_query += " AND i.severity = ?"
             inc_params.append(severity_filter)
         if type_filter:
             inc_query += " AND i.incident_type = ?"
@@ -1254,10 +1254,10 @@ def reports():
             'resolved_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Resolved'").fetchone()['c'],
             'closed_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Closed'").fetchone()['c'],
             'avg_resolution_time':        conn.execute("SELECT AVG(resolution_time_minutes) as a FROM incidents WHERE resolution_time_minutes IS NOT NULL").fetchone()['a'] or 0,
-            'catastrophic_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Catastrophic'").fetchone()['c'],
-            'major_count':                 conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Major'").fetchone()['c'],
-            'moderate_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Moderate'").fetchone()['c'],
-            'minor_count':                  conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Minor'").fetchone()['c'],
+            'catastrophic_count':             conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity='Catastrophic'").fetchone()['c'],
+            'major_count':                 conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity='Major'").fetchone()['c'],
+            'moderate_count':               conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity='Moderate'").fetchone()['c'],
+            'minor_count':                  conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity='Minor'").fetchone()['c'],
         }
 
         recent_activity = conn.execute(
@@ -1290,7 +1290,7 @@ def export_incidents():
 
     conn = get_db_connection()
     query = """
-        SELECT i.incident_id, i.title, i.incident_type, i.priority,
+        SELECT i.incident_id, i.title, i.incident_type, i.severity,
                i.status, i.risk_score, i.affected_asset, i.affected_department,
                u.full_name as assigned_to, i.cluster_id, i.similar_incident_id,
                i.similarity_score, i.reported_date, i.resolved_date,
@@ -1304,7 +1304,7 @@ def export_incidents():
         query += " AND i.status = ?"
         params.append(status_filter)
     if severity_filter:
-        query += " AND i.priority = ?"
+        query += " AND i.severity = ?"
         params.append(severity_filter)
     if type_filter:
         query += " AND i.incident_type = ?"
@@ -1318,7 +1318,7 @@ def export_incidents():
 
     si = StringIO()
     w = csv.writer(si)
-    w.writerow(['incident_id','title','incident_type','priority','status',
+    w.writerow(['incident_id','title','incident_type','severity','status',
                 'risk_score','affected_asset','affected_department','assigned_to',
                 'cluster_id','similar_incident_id','similarity_score',
                 'reported_date','resolved_date','resolution_time_minutes'])
@@ -1904,7 +1904,7 @@ def api_dashboard_stats():
         data = {
             'active_clusters': conn.execute("SELECT COUNT(*) as c FROM incident_clusters WHERE status='Active'").fetchone()['c'],
             'open_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE status='Open'").fetchone()['c'],
-            'critical_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE priority='Catastrophic' AND status NOT IN ('Resolved','Closed')").fetchone()['c'],
+            'critical_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE severity='Catastrophic' AND status NOT IN ('Resolved','Closed')").fetchone()['c'],
             'total_incidents': conn.execute("SELECT COUNT(*) as c FROM incidents").fetchone()['c'],
             'unread_alerts': conn.execute("SELECT COUNT(*) as c FROM alerts WHERE (recipient_id=? OR recipient_role=?) AND is_read=0 AND dismissed=0",[current_user.id,current_user.role]).fetchone()['c'],
             'total_similarity_matches': conn.execute("SELECT COUNT(*) as c FROM incidents WHERE similar_incident_id IS NOT NULL").fetchone()['c'],

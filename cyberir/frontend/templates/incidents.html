@@ -165,9 +165,9 @@
                         class="sort-indicator {% if sort == 'incident_type' %}active{% endif %}">{{ '▼' if sort ==
                         'incident_type' and order == 'desc' else ('▲' if sort == 'incident_type' else '▼') }}</span>
                 </th>
-                <th data-sort="priority" class="sortable">Priority <span
-                        class="sort-indicator {% if sort == 'priority' %}active{% endif %}">{{ '▼' if sort == 'priority'
-                        and order == 'desc' else ('▲' if sort == 'priority' else '▼') }}</span></th>
+                <th data-sort="severity" class="sortable">Severity <span
+                        class="sort-indicator {% if sort == 'severity' %}active{% endif %}">{{ '▼' if sort == 'severity'
+                        and order == 'desc' else ('▲' if sort == 'severity' else '▼') }}</span></th>
                 <th data-sort="status" class="sortable">Status <span
                         class="sort-indicator {% if sort == 'status' %}active{% endif %}">{{ '▼' if sort == 'status' and
                         order == 'desc' else ('▲' if sort == 'status' else '▼') }}</span></th>
@@ -195,7 +195,7 @@
                 <td>{{ inc.title[:40] }}{% if inc.title|length > 40 %}...{% endif %}</td>
                 <td><span class="type-dot"></span> {{ inc.incident_type }}</td>
                 <td>
-                    <span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span>
+                    <span class="badge severity-{{ inc.severity|lower }}">{{ inc.severity }}</span>
                 </td>
                 <td>
                     <span class="badge status-{{ inc.status|lower|replace(' ', '-') }}">{{ inc.status }}</span>
@@ -204,9 +204,9 @@
                     <div style="font-weight: 600; font-size: 0.9rem;">{{ inc.risk_score }}</div>
                     <div class="risk-score-bar">
                         {% set color = '#16a34a' %}
-                        {% if inc.priority == 'Catastrophic' %}{% set color = '#dc2626' %}
-                        {% elif inc.priority == 'Major' %}{% set color = '#ea580c' %}
-                        {% elif inc.priority == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
+                        {% if inc.severity == 'Catastrophic' %}{% set color = '#dc2626' %}
+                        {% elif inc.severity == 'Major' %}{% set color = '#ea580c' %}
+                        {% elif inc.severity == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
                         <div class="risk-score-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};">
                         </div>
                     </div>

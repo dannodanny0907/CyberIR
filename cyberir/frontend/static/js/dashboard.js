@@ -43,23 +43,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('statusChart').style.cursor = 'pointer';
 
     // Severity Doughnut Chart
-    const priorityDataRaw = document.getElementById('priorityData').textContent;
-    const priorityData = JSON.parse(priorityDataRaw);
+    const severityDataRaw = document.getElementById('severityData').textContent;
+    const severityData = JSON.parse(severityDataRaw);
     
-    const priorityColors = {
+    const severityColors = {
         'Catastrophic': '#ef4444',
         'Major': '#f97316',
         'Moderate': '#3b82f6',
         'Minor': '#22c55e'
     };
     
-    const priorityChart = new Chart(document.getElementById('priorityChart'), {
+    const severityChart = new Chart(document.getElementById('severityChart'), {
         type: 'doughnut',
         data: {
-            labels: priorityData.map(d => d.priority),
+            labels: severityData.map(d => d.severity),
             datasets: [{
-                data: priorityData.map(d => d.count),
-                backgroundColor: priorityData.map(d => priorityColors[d.priority] || '#94a3b8'),
+                data: severityData.map(d => d.count),
+                backgroundColor: severityData.map(d => severityColors[d.severity] || '#94a3b8'),
                 borderWidth: 0
             }]
         },
@@ -74,13 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             onClick: (event, activeElements) => {
                 if (activeElements.length > 0) {
-                    const label = priorityChart.data.labels[activeElements[0].index];
-                    window.location.href = `/reports?priority=${encodeURIComponent(label)}`;
+                    const label = severityChart.data.labels[activeElements[0].index];
+                    window.location.href = `/reports?severity=${encodeURIComponent(label)}`;
                 }
             }
         }
     });
-    document.getElementById('priorityChart').style.cursor = 'pointer';
+    document.getElementById('severityChart').style.cursor = 'pointer';
 
     // Type Horizontal Bar Chart
     const typeDataRaw = document.getElementById('typeData').textContent;

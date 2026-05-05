@@ -62,13 +62,13 @@ def calculate_similarity_score(new_incident, historical_incident):
     type_score = 1.0 if new_incident.get('incident_type') == historical_incident.get('incident_type') else 0.0
     description_score = calculate_text_similarity(
         new_incident.get('description') or '', historical_incident.get('description') or '')
-    priority_score = 1.0 if new_incident.get('priority') == historical_incident.get('priority') else 0.0
+    severity_score = 1.0 if new_incident.get('severity') == historical_incident.get('severity') else 0.0
     
     final_score = (
         system_score * 0.40 +
         type_score * 0.30 +
         description_score * 0.20 +
-        priority_score * 0.10
+        severity_score * 0.10
     )
     return round(final_score, 4)
 
@@ -84,8 +84,8 @@ def explain_similarity(new_incident, historical_incident, score):
     elif asset_sim >= 0.5:
         explanations.append(f"Similar affected systems: {new_incident.get('affected_asset')} ≈ {historical_incident.get('affected_asset')}")
         
-    if new_incident.get('priority') == historical_incident.get('priority'):
-        explanations.append(f"Same priority level: {new_incident.get('priority')}")
+    if new_incident.get('severity') == historical_incident.get('severity'):
+        explanations.append(f"Same severity level: {new_incident.get('severity')}")
         
     kw_new = get_keywords(new_incident.get('description') or '')
     kw_hist = get_keywords(historical_incident.get('description') or '')
@@ -144,7 +144,7 @@ def run_similarity(new_incident_id):
                     'title': hist['title'],
                     'incident_type': hist['incident_type'],
                     'affected_asset': hist['affected_asset'],
-                    'priority': hist['priority'],
+                    'severity': hist['severity'],
                     'resolution_notes': hist['resolution_notes'],
                     'resolved_date': hist['resolved_date'],
                     'resolution_time_minutes': hist.get('resolution_time_minutes'),

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     vulnerability_exposure INTEGER CHECK(vulnerability_exposure BETWEEN 1 AND 5),
     is_repeat BOOLEAN DEFAULT 0,
     risk_score REAL,
-    priority TEXT CHECK(priority IN ('Catastrophic','Major','Moderate','Minor')),
+    severity TEXT CHECK(severity IN ('Catastrophic','Major','Moderate','Minor')),
     status TEXT DEFAULT 'Open' CHECK(status IN ('Open','Investigating','Resolved','Closed')),
     assigned_to INTEGER REFERENCES users(id),
     cluster_id TEXT,
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS incident_clusters (
 
 CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    alert_type TEXT NOT NULL CHECK(alert_type IN ('HIGH_PRIORITY','CORRELATION','SIMILARITY','SLA_BREACH','ASSIGNMENT','ESCALATION','SYSTEM')),
+    alert_type TEXT NOT NULL CHECK(alert_type IN ('HIGH_SEVERITY','CORRELATION','SIMILARITY','SLA_BREACH','ASSIGNMENT','ESCALATION','SYSTEM')),
     severity TEXT NOT NULL CHECK(severity IN ('CRITICAL','WARNING','INFO')),
     message TEXT NOT NULL,
     incident_id INTEGER REFERENCES incidents(id),
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 );
 
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(status);
-CREATE INDEX IF NOT EXISTS idx_incidents_priority ON incidents(priority);
+CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
 CREATE INDEX IF NOT EXISTS idx_incidents_cluster ON incidents(cluster_id);
 CREATE INDEX IF NOT EXISTS idx_incidents_assigned ON incidents(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_incidents_reported_date ON incidents(reported_date);

@@ -160,7 +160,7 @@
 }
 
 .filter-badge-status   { background: #e0e7ff; color: #1e40af; }
-.filter-badge-priority { background: #fef3c7; color: #92400e; }
+.filter-badge-severity { background: #fef3c7; color: #92400e; }
 .filter-badge-type     { background: #dcfce7; color: #166534; }
 
 .clear-filters-btn {

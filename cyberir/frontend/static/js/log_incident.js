@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isRepeatCheck = document.getElementById('is_repeat');
     const previewBox = document.getElementById('riskPreviewBox');
     const scoreDisplay = document.getElementById('riskScoreDisplay');
-    const priorityBadge = document.getElementById('priorityBadgePreview'); // Match exact case here!
+    const severityBadge = document.getElementById('severityBadgePreview'); // Match exact case here!
     
     const calculateRisk = () => {
         const crit = parseInt(criticalityInput.value) || 0;
@@ -34,10 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (crit === 0 || sev === 0 || exp === 0) {
             scoreDisplay.textContent = '---';
-            priorityBadge.textContent = 'Pending Data';
-            priorityBadge.style.color = '#64748b';
-            priorityBadge.style.backgroundColor = '#f1f5f9';
-            priorityBadge.style.borderColor = '#cbd5e1';
+            severityBadge.textContent = 'Pending Data';
+            severityBadge.style.color = '#64748b';
+            severityBadge.style.backgroundColor = '#f1f5f9';
+            severityBadge.style.borderColor = '#cbd5e1';
             previewBox.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
             previewBox.style.borderColor = '#cbd5e1';
             scoreDisplay.style.color = '#94a3b8';
@@ -63,11 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
             severity = 'Minor'; color = '#16a34a'; border = '#bbf7d0'; bg = '#dcfce7';
         }
         
-        priorityBadge.textContent = severity;
-        priorityBadge.style.color = color;
+        severityBadge.textContent = severity;
+        severityBadge.style.color = color;
         const warnId = 'cirt-escalation-warn'; let warnEl = document.getElementById(warnId); if(severity === 'Major' || severity === 'Catastrophic'){ if(!warnEl){ warnEl = document.createElement('div'); warnEl.id = warnId; warnEl.style.color = '#dc2626'; warnEl.style.marginTop = '10px'; warnEl.style.fontWeight = 'bold'; warnEl.style.fontSize = '0.9rem'; warnEl.textContent = '⚠️ This incident will be escalated to CIRT'; previewBox.appendChild(warnEl); } } else { if(warnEl) warnEl.remove(); }
-        priorityBadge.style.borderColor = border;
-        priorityBadge.style.backgroundColor = bg;
+        severityBadge.style.borderColor = border;
+        severityBadge.style.backgroundColor = bg;
         previewBox.style.borderColor = border;
         previewBox.style.background = `linear-gradient(135deg, #ffffff, ${bg})`; 
         scoreDisplay.style.color = color;

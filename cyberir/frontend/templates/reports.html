@@ -18,7 +18,7 @@
     <span class="filter-badge filter-badge-status">Status: {{ active_filters.status }}</span>
     {% endif %}
     {% if active_filters.severity %}
-    <span class="filter-badge filter-badge-priority">Severity: {{ active_filters.severity }}</span>
+    <span class="filter-badge filter-badge-severity">Severity: {{ active_filters.severity }}</span>
     {% endif %}
     {% if active_filters.type %}
     <span class="filter-badge filter-badge-type">Type: {{ active_filters.type }}</span>
@@ -197,14 +197,14 @@
             </a>
         </div>
 
-        <!-- RIGHT: By Priority -->
+        <!-- RIGHT: By Severity -->
         <div>
             <div style="font-weight: 600; margin-bottom: 12px; font-size: 0.9rem;">By Severity</div>
             
             <!-- Critical -->
             <a href="/reports?severity=Catastrophic" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.severity == 'Catastrophic' %}active-filter-row{% endif %}">
-                <div class="stat-row-label"><span class="badge priority-critical">Catastrophic</span></div>
+                <div class="stat-row-label"><span class="badge severity-critical">Catastrophic</span></div>
                 <div class="stat-row-count">{{ metrics.catastrophic_count }}</div>
                 {% set crit_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set crit_pct = (metrics.catastrophic_count / metrics.total_incidents * 100)|round|int %} {% endif %}
@@ -216,7 +216,7 @@
             <!-- High -->
             <a href="/reports?severity=Major" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.severity == 'Major' %}active-filter-row{% endif %}">
-                <div class="stat-row-label"><span class="badge priority-high">Major</span></div>
+                <div class="stat-row-label"><span class="badge severity-high">Major</span></div>
                 <div class="stat-row-count">{{ metrics.major_count }}</div>
                 {% set high_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set high_pct = (metrics.major_count / metrics.total_incidents * 100)|round|int %} {% endif %}
@@ -228,7 +228,7 @@
             <!-- Medium -->
             <a href="/reports?severity=Moderate" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.severity == 'Moderate' %}active-filter-row{% endif %}">
-                <div class="stat-row-label"><span class="badge priority-medium">Moderate</span></div>
+                <div class="stat-row-label"><span class="badge severity-medium">Moderate</span></div>
                 <div class="stat-row-count">{{ metrics.moderate_count }}</div>
                 {% set med_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set med_pct = (metrics.moderate_count / metrics.total_incidents * 100)|round|int %} {% endif %}
@@ -240,7 +240,7 @@
             <!-- Low -->
             <a href="/reports?severity=Minor" class="stat-filter-link">
             <div class="stat-status-row {% if active_filters and active_filters.severity == 'Minor' %}active-filter-row{% endif %}">
-                <div class="stat-row-label"><span class="badge priority-low">Minor</span></div>
+                <div class="stat-row-label"><span class="badge severity-low">Minor</span></div>
                 <div class="stat-row-count">{{ metrics.minor_count }}</div>
                 {% set low_pct = 0 %}
                 {% if metrics.total_incidents > 0 %} {% set low_pct = (metrics.minor_count / metrics.total_incidents * 100)|round|int %} {% endif %}
@@ -295,7 +295,7 @@
                     <td><span style="font-family: monospace; color: #2563eb; font-weight: 600;">{{ inc.incident_id }}</span></td>
                     <td>{{ inc.title[:45] }}{% if inc.title|length > 45 %}...{% endif %}</td>
                     <td><span class="badge" style="background:#f1f5f9;color:#475569;">{{ inc.incident_type }}</span></td>
-                    <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                    <td><span class="badge severity-{{ inc.severity|lower }}">{{ inc.severity }}</span></td>
                     <td><span class="badge {% if inc.status == 'Open' %}status-open{% elif inc.status == 'Investigating' %}status-investigating{% elif inc.status == 'Resolved' %}status-resolved{% else %}status-closed{% endif %}">{{ inc.status }}</span></td>
                     <td style="font-weight:600;">{{ inc.risk_score }}</td>
                     <td style="color:#64748b;font-size:0.8rem;">{{ inc.reported_date[:10] if inc.reported_date else '—' }}</td>

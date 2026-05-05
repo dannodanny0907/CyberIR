@@ -43,7 +43,7 @@
     <form id="filterForm" method="GET" action="/alerts" style="display: flex; gap: 10px; align-items: center; margin-left: 10px;">
         <select name="alert_type" class="filter-select" onchange="this.form.submit()">
             <option value="All Types" {% if request.args.get('alert_type') == 'All Types' or not request.args.get('alert_type') %}selected{% endif %}>All Types</option>
-            <option value="High Priority" {% if request.args.get('alert_type') == 'High Priority' %}selected{% endif %}>High Priority</option>
+            <option value="High Severity" {% if request.args.get('alert_type') == 'High Severity' %}selected{% endif %}>High Severity</option>
             <option value="Correlation" {% if request.args.get('alert_type') == 'Correlation' %}selected{% endif %}>Correlation</option>
             <option value="Similarity" {% if request.args.get('alert_type') == 'Similarity' %}selected{% endif %}>Similarity</option>
             <option value="SLA Breach" {% if request.args.get('alert_type') == 'SLA Breach' %}selected{% endif %}>SLA Breach</option>
@@ -106,7 +106,7 @@
             
             <div class="alert-item {% if alert.is_read == 0 %}alert-unread{% endif %}">
                 <div class="alert-icon">
-                    {% if alert.alert_type == 'HIGH_PRIORITY' %}🔴
+                    {% if alert.alert_type == 'HIGH_SEVERITY' %}🔴
                     {% elif alert.alert_type == 'CORRELATION' %}🔗
                     {% elif alert.alert_type == 'SIMILARITY' %}🔍
                     {% elif alert.alert_type == 'SLA_BREACH' %}⏰
@@ -118,7 +118,7 @@
                 <div class="alert-body">
                     <div class="alert-header-row">
                         <div class="alert-type-label" style="
-                            {% if alert.alert_type == 'HIGH_PRIORITY' %}color: #dc2626;
+                            {% if alert.alert_type == 'HIGH_SEVERITY' %}color: #dc2626;
                             {% elif alert.alert_type == 'CORRELATION' %}color: #7c3aed;
                             {% elif alert.alert_type == 'SIMILARITY' %}color: #2563eb;
                             {% elif alert.alert_type == 'SLA_BREACH' %}color: #ea580c;
@@ -172,7 +172,7 @@
         What do these alerts mean? <span class="toggle-icon">▼</span>
     </button>
     <div id="legendContent" class="legend-content">
-        <div class="legend-item"><span>🔴</span> <span><strong>High Priority</strong> — Critical or high priority incident logged</span></div>
+        <div class="legend-item"><span>🔴</span> <span><strong>High Severity</strong> — Critical or high severity incident logged</span></div>
         <div class="legend-item"><span>🔗</span> <span><strong>Correlation</strong> — Related incidents automatically grouped into cluster</span></div>
         <div class="legend-item"><span>🔍</span> <span><strong>Similarity</strong> — Similar past incident found with suggested solution</span></div>
         <div class="legend-item"><span>⏰</span> <span><strong>SLA Breach</strong> — Incident has exceeded response time limit</span></div>

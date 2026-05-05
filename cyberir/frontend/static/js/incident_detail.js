@@ -387,7 +387,7 @@ function renderPdfPreview(incident, assignedName, engineerName, managerName, log
       <strong>5. Systems Affected</strong><p>Attack Source: ${incident.attack_source || '—'}<br>
          Affected IPs: ${incident.affected_system_ips || '—'}<br>OS: ${incident.affected_system_os || '—'}<br>
          Location: ${incident.affected_system_location || '—'}</p><hr>
-      <strong>6. Risk Assessment</strong><p>Risk Score: ${incident.risk_score}/100<br>Severity: <strong>${incident.priority || incident.severity}</strong></p><hr>
+      <strong>6. Risk Assessment</strong><p>Risk Score: ${incident.risk_score}/100<br>Severity: <strong>${incident.severity || incident.severity}</strong></p><hr>
       <strong>7. Validation</strong><br><br><em>Officer Responsible:</em><br>
       ${assignedName || '—'}&nbsp;&nbsp; ____________________________ Name / ____________________________ Sign / ________________ Date<br><br>
       <em>Cybersecurity Engineer:</em><br><span id="previewEngineerName">${engineerName}</span>&nbsp;&nbsp;

@@ -321,7 +321,7 @@
                 ⚠️ Risk Assessment
             </div>
             <div class="gray-info-box">
-                Current: Risk Score <strong style="color:var(--primary);">{{ incident.risk_score }}</strong> — Priority <span class="badge priority-{{ incident.priority|lower }}">{{ incident.priority }}</span>
+                Current: Risk Score <strong style="color:var(--primary);">{{ incident.risk_score }}</strong> — Severity <span class="badge severity-{{ incident.severity|lower }}">{{ incident.severity }}</span>
             </div>
             <div class="form-grid">
                 <div>
@@ -371,7 +371,7 @@
                     <div class="form-label">Estimated Risk Score</div>
                     <div class="risk-preview-box" id="riskPreviewBox">
                         <div class="risk-score-display" id="riskScoreDisplay">---</div>
-                        <div class="priority-badge-preview" id="priorityBadgePreview">Pending Data</div>
+                        <div class="severity-badge-preview" id="severityBadgePreview">Pending Data</div>
                     </div>
                 </div>
             </div>

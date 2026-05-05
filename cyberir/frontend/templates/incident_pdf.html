@@ -380,8 +380,8 @@
         <span class="field-label">Severity Level:</span>
         <span class="field-value">
           <span class="severity-box severity-{{
-            (incident.priority or incident.severity) | lower }}">
-            {{ (incident.priority or incident.severity) | upper }}
+            (incident.severity or incident.severity) | lower }}">
+            {{ (incident.severity or incident.severity) | upper }}
           </span>
         </span>
       </div>

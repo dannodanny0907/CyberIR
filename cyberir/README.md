@@ -71,7 +71,7 @@ Window: 48 hours (configurable)
 
 #### Similarity Engine
 Weights: System(40%) + Type(30%) + Description(20%)
-  + Priority(10%)
+  + Severity(10%)
 Threshold: 0.50 (configurable)
 Returns: Top 5 most similar resolved incidents
 

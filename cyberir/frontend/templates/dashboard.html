@@ -13,7 +13,7 @@
 <script id="statusData" type="application/json">
   {{ incidents_by_status | tojson }}
 </script>
-<script id="priorityData" type="application/json">
+<script id="severityData" type="application/json">
   {{ incidents_by_severity | tojson }}
 </script>
 <script id="typeData" type="application/json">
@@ -100,7 +100,7 @@
 <div class="charts-row">
     <div class="chart-card">
         <div class="chart-header">Incidents by Severity</div>
-        <canvas id="priorityChart" style="max-height: 240px;"></canvas>
+        <canvas id="severityChart" style="max-height: 240px;"></canvas>
     </div>
     <div class="chart-card">
         <div class="chart-header">Incidents by Status</div>
@@ -161,14 +161,14 @@
                     <tr data-href="/incidents/{{ inc.incident_id }}">
                         <td><span style="font-family: monospace; color: #2563eb;">{{ inc.incident_id }}</span></td>
                         <td>{{ inc.title[:32] }}{% if inc.title|length > 32 %}...{% endif %}</td>
-                        <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                        <td><span class="badge severity-{{ inc.severity|lower }}">{{ inc.severity }}</span></td>
                         <td>
                             <div style="font-weight: 700;">{{ inc.risk_score }}</div>
                             <div class="mini-risk-bar">
                                 {% set color = '#16a34a' %}
-                                {% if inc.priority == 'Catastrophic' %}{% set color = '#dc2626' %}
-                                {% elif inc.priority == 'Major' %}{% set color = '#ea580c' %}
-                                {% elif inc.priority == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
+                                {% if inc.severity == 'Catastrophic' %}{% set color = '#dc2626' %}
+                                {% elif inc.severity == 'Major' %}{% set color = '#ea580c' %}
+                                {% elif inc.severity == 'Moderate' %}{% set color = '#2563eb' %}{% endif %}
                                 <div class="mini-risk-fill" style="width: {{ inc.risk_score }}%; background: {{ color }};"></div>
                             </div>
                         </td>
@@ -212,7 +212,7 @@
                     <tr data-href="/correlation/{{ cluster.cluster_id }}">
                         <td><span style="font-family: monospace; color: #7c3aed;">{{ cluster.cluster_id }}</span></td>
                         <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ cluster.incident_count }}</span></td>
-                        <td><span class="badge priority-{{ cluster.severity|lower }}">{{ cluster.severity }}</span></td>
+                        <td><span class="badge severity-{{ cluster.severity|lower }}">{{ cluster.severity }}</span></td>
                         <td><span class="badge {% if cluster.status == 'Active' %}status-open{% elif cluster.status == 'Investigating' %}status-investigating{% else %}status-resolved{% endif %}">{{ cluster.status }}</span></td>
                     </tr>
                     {% endfor %}
@@ -335,7 +335,7 @@
                     <td><span style="font-family: monospace; color: #2563eb;">{{ inc.incident_id }}</span></td>
                     <td>{{ inc.title[:35] }}{% if inc.title|length > 35 %}...{% endif %}</td>
                     <td>{{ inc.incident_type }}</td>
-                    <td><span class="badge priority-{{ inc.priority|lower }}">{{ inc.priority }}</span></td>
+                    <td><span class="badge severity-{{ inc.severity|lower }}">{{ inc.severity }}</span></td>
                     <td><span class="badge {% if inc.status == 'Open' %}status-open{% elif inc.status == 'Investigating' %}status-investigating{% elif inc.status == 'Resolved' %}status-resolved{% else %}status-closed{% endif %}">{{ inc.status }}</span></td>
                     <td style="font-weight: 600;">{{ inc.risk_score }}</td>
                     <td style="color: #64748b; font-size: 0.8rem;">{{ inc.reported_date.split('T')[0] if 'T' in inc.reported_date else inc.reported_date.split(' ')[0] }}</td>

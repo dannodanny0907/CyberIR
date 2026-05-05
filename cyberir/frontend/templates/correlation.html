@@ -99,7 +99,7 @@
             <div style="display:flex; justify-content: space-between; margin-bottom:4px;">
                 <div class="cluster-id-text">{{ c.cluster_id }}</div>
                 <div style="display:flex; gap:6px;">
-                    <span class="badge priority-{{ c.severity|lower }}">{{ c.severity }}</span>
+                    <span class="badge severity-{{ c.severity|lower }}">{{ c.severity }}</span>
                     <span class="badge status-{{ c.status|lower|replace(' ', '-') }}">{{ c.status }}</span>
                 </div>
             </div>
@@ -111,7 +111,7 @@
         
         <div class="cluster-incident-pills">
             {% for inc in c.incidents[:4] %}
-                <a href="/incidents/{{ inc.incident_id }}" class="incident-pill pill-{{ inc.priority|lower }}" onclick="event.stopPropagation();">{{ inc.incident_id }}</a>
+                <a href="/incidents/{{ inc.incident_id }}" class="incident-pill pill-{{ inc.severity|lower }}" onclick="event.stopPropagation();">{{ inc.incident_id }}</a>
             {% endfor %}
             {% if c.incidents|length > 4 %}
                 <span class="incident-pill pill-more">+{{ c.incidents|length - 4 }} more</span>

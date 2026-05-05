@@ -135,8 +135,8 @@ def run_correlation(new_incident_id):
                              
         # STEP 7
         if action == "created":
-            incidents_in_cluster = conn.execute('SELECT priority, incident_type, affected_department FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
-            priorities = [i['priority'] for i in incidents_in_cluster]
+            incidents_in_cluster = conn.execute('SELECT severity, incident_type, affected_department FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
+            priorities = [i['severity'] for i in incidents_in_cluster]
             
             if 'Catastrophic' in priorities: severity = 'Catastrophic'
             elif 'Major' in priorities: severity = 'Major'
@@ -167,8 +167,8 @@ def run_correlation(new_incident_id):
             ''', (cluster_id, cluster_name, incident_count, primary_type, severity, new_incident['reported_date']))
             
         elif action == "joined":
-            incidents_in_cluster = conn.execute('SELECT priority FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
-            priorities = [i['priority'] for i in incidents_in_cluster]
+            incidents_in_cluster = conn.execute('SELECT severity FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
+            priorities = [i['severity'] for i in incidents_in_cluster]
             if 'Catastrophic' in priorities: new_severity = 'Catastrophic'
             elif 'Major' in priorities: new_severity = 'Major'
             elif 'Moderate' in priorities: new_severity = 'Moderate'
@@ -220,7 +220,7 @@ def run_correlation(new_incident_id):
 # Handle logic for recalculate_cluster
 def recalculate_cluster(cluster_id):
     conn = get_db_connection()
-    incidents_in_cluster = conn.execute('SELECT priority, incident_type FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
+    incidents_in_cluster = conn.execute('SELECT severity, incident_type FROM incidents WHERE cluster_id = ?', (cluster_id,)).fetchall()
     count = len(incidents_in_cluster)
     
     if count <= 1:
@@ -230,7 +230,7 @@ def recalculate_cluster(cluster_id):
         conn.commit()
         return {"dissolved": True}
         
-    priorities = [i['priority'] for i in incidents_in_cluster]
+    priorities = [i['severity'] for i in incidents_in_cluster]
     if 'Catastrophic' in priorities: severity = 'Catastrophic'
     elif 'Major' in priorities: severity = 'Major'
     elif 'Moderate' in priorities: severity = 'Moderate'
