@@ -1,3 +1,18 @@
+
+// Patch global fetch for CSRF
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+if (csrfToken) {
+    const originalFetch = window.fetch;
+    window.fetch = function() {
+        let [resource, config] = arguments;
+        if(config && (config.method === 'POST' || config.method === 'PUT' || config.method === 'DELETE')) {
+            config.headers = config.headers || {};
+            config.headers['X-CSRFToken'] = csrfToken;
+        }
+        return originalFetch(resource, config);
+    };
+}
+
 /* File: base.js - Global client-side interactions, navigation, and state */
 document.addEventListener('DOMContentLoaded', () => {
     // Live clock

@@ -6,6 +6,7 @@ import sys
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
+ROOT = os.path.dirname(BACKEND_DIR)
 
 
 try:
@@ -54,12 +55,15 @@ from database import (get_db_connection, init_db,
     create_default_admin)
 from datetime import timedelta
 
-ROOT = os.path.dirname(BACKEND_DIR)
-
 app = Flask(__name__,
     template_folder=os.path.join(ROOT, 'frontend', 'templates'),
     static_folder=os.path.join(ROOT, 'frontend', 'static'))
-app.secret_key = 'cyberir-secret-key-2026'
+from dotenv import load_dotenv
+load_dotenv()
+import logging
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
+from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect(app)
 
 @app.before_request
 def apply_session_timeout():
@@ -110,8 +114,7 @@ def inject_globals():
                 'app_version': '1.0.0',
                 'app_name': 'CyberIR'
             }
-    except:
-        pass
+    except Exception as e: logging.error(f"Error: {e}")
     return {
         'unread_alerts_count': 0,
         'active_correlation_clusters': 0,
@@ -336,7 +339,7 @@ def export_cirt_incidents():
         return redirect(url_for('cirt_incidents'))
         
     conn = get_db_connection()
-    incidents = conn.execute("SELECT * FROM incidents WHERE escalated_to_cirt = 1 ORDER BY reported_date DESC").fetchall()
+    incidents = conn.execute("SELECT i.*, u.full_name as assigned_name FROM incidents i LEFT JOIN users u ON i.assigned_to = u.id WHERE i.escalated_to_cirt = 1 ORDER BY i.reported_date DESC").fetchall()
     conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Incidents','Exported CIRT incidents to CSV')",[current_user.id])
     conn.commit()
     conn.close()
@@ -357,7 +360,7 @@ def export_cirt_incidents():
             inc['affected_department'],
             inc['detected_datetime'],
             inc['reported_date'],
-            inc['assigned_to'] # mapped to name ideally, but let's just dump what's there
+            inc['assigned_name']
         ])
         
     output = si.getvalue()
@@ -542,11 +545,11 @@ def log_incident():
             try:
                 from correlation_engine import run_correlation
                 run_correlation(new_id)
-            except: pass
+            except Exception as e: logging.error(f"Error: {e}")
             try:
                 from similarity_engine import run_similarity
                 run_similarity(new_id)
-            except: pass
+            except Exception as e: logging.error(f"Error: {e}")
             flash(f'Incident {incident_id} logged successfully.','success')
             return redirect(url_for('incidents'))
         analysts = conn.execute("SELECT id, full_name FROM users WHERE role IN ('Admin','Analyst') AND is_active=1").fetchall()
@@ -824,14 +827,18 @@ def update_incident_status(incident_id):
     try:
         conn = get_db_connection()
         new_status = request.form.get('new_status','')
-        updates = "status=?,updated_at=datetime('now'),updated_by=?"
+        valid_statuses = ['Open', 'Investigating', 'Resolved', 'Closed']
+        if new_status not in valid_statuses:
+            return jsonify({'success':False,'message':'Invalid status'})
+        query = "UPDATE incidents SET status=?,updated_at=datetime('now'),updated_by=?"
         params = [new_status, current_user.id]
         if new_status == 'Investigating':
-            updates += ",investigating_started_date=datetime('now')"
+            query += ",investigating_started_date=datetime('now')"
         elif new_status == 'Closed':
-            updates += ",closed_date=datetime('now')"
+            query += ",closed_date=datetime('now')"
+        query += " WHERE incident_id=?"
         params.append(incident_id)
-        conn.execute(f"UPDATE incidents SET {updates} WHERE incident_id=?", params)
+        conn.execute(query, params)
         conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'UPDATE_INCIDENT','Incident',?)",[current_user.id,f"Updated incident {incident_id}: changed status to {new_status}"])
         conn.commit()
         conn.close()
@@ -851,7 +858,7 @@ def resolve_incident(incident_id):
         incident = conn.execute("SELECT * FROM incidents WHERE incident_id=?",[incident_id]).fetchone()
         reported = incident['reported_date']
         conn.execute(
-            "UPDATE incidents SET status='Resolved',resolved_date=datetime('now'),resolution_notes=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
+            "UPDATE incidents SET status='Resolved',resolved_date=datetime('now'),resolution_time_minutes=CAST((julianday('now') - julianday(reported_date)) * 24 * 60 AS INTEGER),resolution_notes=?,updated_at=datetime('now'),updated_by=? WHERE incident_id=?",
             [resolution_notes,current_user.id,incident_id])
         conn.execute("INSERT INTO activity_logs (user_id,action_type,target_type,details) VALUES (?,'RESOLVE_INCIDENT','Incident',?)",[current_user.id,f"Resolved incident {incident_id} with resolution notes"])
         conn.commit()
@@ -1039,11 +1046,12 @@ def add_cluster_note(cluster_id):
         existing = cluster['notes'] or ''
         from datetime import datetime
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-        new_notes = f"{existing}\n[{timestamp}] {current_user.full_name}: {note}".strip()
+        full_name = conn.execute("SELECT full_name FROM users WHERE id=?", [current_user.id]).fetchone()['full_name']
+        new_notes = f"{existing}\n[{timestamp}] {full_name}: {note}".strip()
         conn.execute("UPDATE incident_clusters SET notes=?,last_updated=datetime('now') WHERE cluster_id=?",[new_notes,cluster_id])
         conn.commit()
         conn.close()
-        return jsonify({'success':True,'note':f'[{timestamp}] {current_user.full_name}: {note}'})
+        return jsonify({'success':True,'note':f'[{timestamp}] {full_name}: {note}'})
     except Exception as e:
         return jsonify({'success':False,'message':str(e)})
 
@@ -1879,7 +1887,7 @@ def update_avatar_color():
         try:
             conn.execute("ALTER TABLE users ADD COLUMN avatar_color TEXT DEFAULT '#2563eb'")
             conn.commit()
-        except: pass
+        except Exception as e: logging.error(f"Error: {e}")
         conn.execute("UPDATE users SET avatar_color=? WHERE id=?",[color,current_user.id])
         conn.commit(); conn.close()
         return jsonify({'success':True})

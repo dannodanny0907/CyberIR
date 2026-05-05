@@ -11,6 +11,7 @@
 {% block content %}
 <div class="log-incident-container">
     <form id="logIncidentForm" action="/incidents/log" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
         <!-- Section 0: Contact Information -->
         <div class="card">
